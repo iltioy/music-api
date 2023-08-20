@@ -11,13 +11,13 @@ datasource db {
 }
 
 model User {
-
   id Int @id @default(autoincrement())
-  
-  username String
-  email String @unique
-  hash String
 
+  username String
+  email    String @unique
+  hash     String
+
+  songs     Song[]
   playlists Playlist[]
 
   createdAt DateTime @default(now())
@@ -26,15 +26,15 @@ model User {
 }
 
 model Playlist {
-
   id Int @id @default(autoincrement())
 
-  image_url String
+  name            String
+  image_url       String?
   number_of_songs Int
-  listening_time Int
+  listening_time  Int
 
   owner_id Int
-  owner User @relation(fields: [owner_id], references: [id])
+  owner    User @relation(fields: [owner_id], references: [id])
 
   songs Song[]
 
@@ -42,13 +42,15 @@ model Playlist {
 }
 
 model Song {
-
   id Int @id @default(autoincrement())
 
-  name String
-  author String
-  album String?
-  image_url String
+  name      String
+  author    String
+  album     String?
+  image_url String?
+
+  owner_id Int
+  owner    User @relation(fields: [owner_id], references: [id])
 
   playlists Playlist[]
 

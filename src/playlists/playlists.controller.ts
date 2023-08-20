@@ -24,4 +24,9 @@ export class PlaylistsController {
   getPlaylist(@Param('playlistId', ParseIntPipe) playlistId: number) {
     return this.playlistService.getPlaylist(playlistId);
   }
+
+  @UseGuards(AuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  @Post('/create')
+  createPlaylist(@GetUser('id') userId: number) {}
 }

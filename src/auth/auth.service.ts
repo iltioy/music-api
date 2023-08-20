@@ -75,7 +75,7 @@ export class AuthService {
     username: string,
   ): Promise<{ access_token: string }> {
     const payload = {
-      sub: userId,
+      id: userId,
       email,
       username,
     };
@@ -83,7 +83,7 @@ export class AuthService {
     // const secret = ""
 
     const token = await this.jwt.signAsync(payload, {
-      expiresIn: '10s',
+      expiresIn: '30m',
       secret: process.env.JWT_SECRET,
     });
     return {

@@ -7,6 +7,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
 import { PlaylistsModule } from './playlists/playlists.module';
 import { SongsModule } from './songs/songs.module';
+import { FilesModule } from './files/files.module';
+import { AwsModule } from './aws/aws.module';
 
 @Module({
   imports: [
@@ -18,6 +20,8 @@ import { SongsModule } from './songs/songs.module';
     }),
     PlaylistsModule,
     SongsModule,
+    FilesModule,
+    AwsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
