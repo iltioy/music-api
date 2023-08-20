@@ -47,7 +47,7 @@ model Song {
 
   name String
   author String
-  album String
+  album String?
   image_url String
 
   playlists Playlist[]
