@@ -28,14 +28,14 @@ export class SongsController {
   }
 
   @UseGuards(AuthGuard)
-  @Post('/create')
+  @Post('create')
   @HttpCode(HttpStatus.CREATED)
   createSong(@GetUser('id') userId: number, @Body() dto: createSongDto) {
     return this.songsService.createSong(userId, dto);
   }
 
   @UseGuards(AuthGuard)
-  @Patch('/update/:songId')
+  @Patch('update/:songId')
   //   @HttpCode(HttpStatus.OK)
   updateSong(
     @GetUser('id') userId: number,
@@ -46,7 +46,7 @@ export class SongsController {
   }
 
   @UseGuards(AuthGuard)
-  @Delete('/delete/:songId')
+  @Delete('delete/:songId')
   deleteSong(
     @GetUser('id') userId: number,
     @Param('songId', ParseIntPipe) songId: number,

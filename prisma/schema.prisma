@@ -10,12 +10,33 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Image {
+
+  id Int @id @default(autoincrement())
+
+  user_id Int? @unique
+  user User? @relation(fields: [user_id], references: [id])
+
+  song_id Int? @unique
+  song Song? @relation(fields: [song_id], references: [id])
+
+  playlist_id Int? @unique
+  playlist Playlist? @relation(fields: [playlist_id], references: [id])
+
+  image_url String?
+  image_key String?
+
+  @@map("images")
+}
+
 model User {
   id Int @id @default(autoincrement())
 
   username String
   email    String @unique
   hash     String
+
+  image Image?
 
   songs     Song[]
   playlists Playlist[]
@@ -29,9 +50,8 @@ model Playlist {
   id Int @id @default(autoincrement())
 
   name            String
-  image_url       String?
-  number_of_songs Int
-  listening_time  Int
+
+  image Image?
 
   owner_id Int
   owner    User @relation(fields: [owner_id], references: [id])
@@ -47,7 +67,8 @@ model Song {
   name      String
   author    String
   album     String?
-  image_url String?
+
+  image Image?
 
   owner_id Int
   owner    User @relation(fields: [owner_id], references: [id])

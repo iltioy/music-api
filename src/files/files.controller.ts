@@ -4,6 +4,8 @@ import {
   UseInterceptors,
   UploadedFile,
   ParseFilePipe,
+  Delete,
+  Body,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { imageValidators } from './validators/image-validators';
@@ -25,5 +27,10 @@ export class FilesController {
     image: Express.Multer.File,
   ) {
     return this.fileService.uploadImage(image);
+  }
+
+  @Delete('delete/image')
+  deleteImage(@Body('imageKey') imageKey: string) {
+    return this.fileService.deleteImage(imageKey);
   }
 }

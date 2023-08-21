@@ -8,6 +8,7 @@ import { AuthDto } from './dto';
 import * as argon from 'argon2';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
+import { DEFAULT_USER_IMAGE_URL } from 'src/constants';
 
 @Injectable()
 export class AuthService {
@@ -34,6 +35,12 @@ export class AuthService {
           email: dto.email,
           hash,
           username: `User${usersCount}`,
+          image: {
+            create: {
+              image_key: null,
+              image_url: DEFAULT_USER_IMAGE_URL,
+            },
+          },
         },
       });
 
@@ -79,8 +86,6 @@ export class AuthService {
       email,
       username,
     };
-
-    // const secret = ""
 
     const token = await this.jwt.signAsync(payload, {
       expiresIn: '30m',

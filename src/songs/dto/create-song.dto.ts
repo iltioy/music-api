@@ -17,4 +17,8 @@ export class createSongDto {
   @IsString()
   @IsOptional()
   image_url?: string;
+
+  @IsString()
+  @IsOptional()
+  image_key?: string;
 }

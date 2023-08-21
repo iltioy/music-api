@@ -7,15 +7,26 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { createSongDto } from './dto';
 import { updateSongDto } from './dto/update-song.dto';
+import { DEFAULT_MUSIC_IMAGE_URL } from 'src/constants';
+import { IMAGE_QUERY, USER_QUERY } from 'src/queries';
 
 @Injectable()
 export class SongsService {
+  private defaultImage = {
+    image_key: null,
+    image_url: DEFAULT_MUSIC_IMAGE_URL,
+  };
+
   constructor(private prisma: PrismaService) {}
 
   async getSong(songId: number) {
     const song = await this.prisma.song.findUnique({
       where: {
         id: songId,
+      },
+      include: {
+        image: IMAGE_QUERY,
+        owner: USER_QUERY,
       },
     });
 
@@ -27,13 +38,28 @@ export class SongsService {
   }
 
   async createSong(userId: number, dto: createSongDto) {
+    let songImage = this.defaultImage;
+
+    if (dto.image_key) {
+      songImage = {
+        image_key: dto.image_key,
+        image_url: dto.image_url,
+      };
+    }
+
     const song = await this.prisma.song.create({
       data: {
         author: dto.author,
-        image_url: dto.image_url,
+        image: {
+          create: songImage,
+        },
         name: dto.name,
         album: dto.album,
         owner_id: userId,
+      },
+      include: {
+        owner: USER_QUERY,
+        image: IMAGE_QUERY,
       },
     });
 
@@ -49,6 +75,9 @@ export class SongsService {
       where: {
         id: songId,
       },
+      include: {
+        image: IMAGE_QUERY,
+      },
     });
 
     if (!song) {
@@ -57,6 +86,14 @@ export class SongsService {
 
     this.checkAccess(userId, song.owner_id);
 
+    let songImage = song.image;
+    if (dto.image_key) {
+      songImage = {
+        image_key: dto.image_key,
+        image_url: dto.image_url,
+      };
+    }
+
     const updatedSong = await this.prisma.song.update({
       where: {
         id: songId,
@@ -64,8 +101,16 @@ export class SongsService {
       data: {
         album: dto.album,
         author: dto.author,
-        image_url: dto.image_url,
+        image: {
+          update: {
+            data: songImage,
+          },
+        },
         name: dto.name,
+      },
+      include: {
+        image: IMAGE_QUERY,
+        owner: USER_QUERY,
       },
     });
 

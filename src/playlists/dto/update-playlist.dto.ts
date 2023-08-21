@@ -6,11 +6,11 @@ import {
   IsInt,
 } from 'class-validator';
 
-export class createPlaylistDto {
+export class updatePlaylistDto {
   @IsString()
   @Length(0, 50)
-  @IsNotEmpty()
-  name: string;
+  @IsOptional()
+  name?: string;
 
   @IsString()
   @IsOptional()
