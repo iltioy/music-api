@@ -8,6 +8,10 @@ export class createSongDto {
 
   @IsString()
   @IsNotEmpty()
+  url: string;
+
+  @IsString()
+  @IsNotEmpty()
   author: string;
 
   @IsString()

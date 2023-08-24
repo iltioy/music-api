@@ -19,8 +19,4 @@ export class createPlaylistDto {
   @IsString()
   @IsOptional()
   image_key?: string;
-
-  @IsOptional()
-  @IsInt({ each: true })
-  songIds?: number[];
 }

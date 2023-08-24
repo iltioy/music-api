@@ -37,6 +37,30 @@ export class SongsService {
     return song;
   }
 
+  async getRandomSong() {
+    const songsCountQuery = await this.prisma.song.aggregate({
+      _count: {
+        _all: true,
+      },
+    });
+
+    const songsCount = songsCountQuery._count._all;
+
+    const randomSongId = Math.floor(Math.random() * songsCount + 1);
+
+    const randomSong = await this.prisma.song.findUnique({
+      where: {
+        id: randomSongId,
+      },
+      include: {
+        image: IMAGE_QUERY,
+        owner: USER_QUERY,
+      },
+    });
+
+    return randomSong;
+  }
+
   async createSong(userId: number, dto: createSongDto) {
     let songImage = this.defaultImage;
 
@@ -56,6 +80,7 @@ export class SongsService {
         name: dto.name,
         album: dto.album,
         owner_id: userId,
+        url: dto.url,
       },
       include: {
         owner: USER_QUERY,

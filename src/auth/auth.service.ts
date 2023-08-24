@@ -8,7 +8,7 @@ import { AuthDto } from './dto';
 import * as argon from 'argon2';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
-import { DEFAULT_USER_IMAGE_URL } from 'src/constants';
+import { createUserDto } from 'src/users/dto';
 
 @Injectable()
 export class AuthService {
@@ -22,29 +22,13 @@ export class AuthService {
     const hash = await argon.hash(dto.password);
 
     try {
-      const userCountQuery = await this.prisma.user.aggregate({
-        _count: {
-          _all: true,
-        },
-      });
+      const createUserDto: createUserDto = {
+        email: dto.email,
+        hash,
+      };
+      const user = await this.usersService.createUser(createUserDto);
 
-      const usersCount = userCountQuery._count._all;
-
-      const user = await this.prisma.user.create({
-        data: {
-          email: dto.email,
-          hash,
-          username: `User${usersCount}`,
-          image: {
-            create: {
-              image_key: null,
-              image_url: DEFAULT_USER_IMAGE_URL,
-            },
-          },
-        },
-      });
-
-      return this.signToken(user.id, user.email, user.username);
+      return this.signToken(user.id, user.email, user.username, user.role);
     } catch (error) {
       if (error.code === 'P2002') {
         throw new ForbiddenException('Credentials are already taken');
@@ -73,18 +57,20 @@ export class AuthService {
       throw new ForbiddenException('Credentials are incorrect!');
     }
 
-    return this.signToken(user.id, user.email, user.username);
+    return this.signToken(user.id, user.email, user.username, user.role);
   }
 
   async signToken(
     userId: number,
     email: string,
     username: string,
+    role: string,
   ): Promise<{ access_token: string }> {
     const payload = {
       id: userId,
       email,
       username,
+      role,
     };
 
     const token = await this.jwt.signAsync(payload, {

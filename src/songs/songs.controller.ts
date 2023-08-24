@@ -27,6 +27,12 @@ export class SongsController {
     return this.songsService.getSong(songId);
   }
 
+  @Get('random')
+  @HttpCode(HttpStatus.OK)
+  getRandomSong() {
+    return this.songsService.getRandomSong();
+  }
+
   @UseGuards(AuthGuard)
   @Post('create')
   @HttpCode(HttpStatus.CREATED)

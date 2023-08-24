@@ -19,4 +19,12 @@ export class FilesService {
     }
     return this.awsService.deleteFile(imageKey, 'music-images');
   }
+
+  async uploadAudio(audio: Express.Multer.File) {
+    const metadata = await this.awsService.uploadFile(audio, 'music-audio');
+    return {
+      aduio_url: metadata.Location,
+      audio_key: metadata.Key,
+    };
+  }
 }

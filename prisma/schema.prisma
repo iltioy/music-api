@@ -11,17 +11,16 @@ datasource db {
 }
 
 model Image {
-
   id Int @id @default(autoincrement())
 
-  user_id Int? @unique
-  user User? @relation(fields: [user_id], references: [id])
+  user_id Int?  @unique
+  user    User? @relation(fields: [user_id], references: [id])
 
-  song_id Int? @unique
-  song Song? @relation(fields: [song_id], references: [id])
+  song_id Int?  @unique
+  song    Song? @relation(fields: [song_id], references: [id])
 
-  playlist_id Int? @unique
-  playlist Playlist? @relation(fields: [playlist_id], references: [id])
+  playlist_id Int?      @unique
+  playlist    Playlist? @relation(fields: [playlist_id], references: [id])
 
   image_url String?
   image_key String?
@@ -35,11 +34,13 @@ model User {
   username String @unique
   email    String @unique
   hash     String
+  role String @default("user")
 
   image Image?
 
   songs     Song[]
   playlists Playlist[]
+  categories Category[]
 
   createdAt DateTime @default(now())
 
@@ -49,14 +50,19 @@ model User {
 model Playlist {
   id Int @id @default(autoincrement())
 
-  name            String
+  name String
 
   image Image?
 
-  owner_id Int
-  owner    User @relation(fields: [owner_id], references: [id])
+  is_favorite Boolean @default(false)
+  owner_id    Int
+  owner       User    @relation(fields: [owner_id], references: [id])
 
-  songs Song[]
+  songs OrderedSong[]
+  categories OrderedPlaylist[]
+
+  chart_id Int? @unique
+  chart Chart? @relation(fields: [chart_id], references: [id])
 
   @@map("playlists")
 }
@@ -64,16 +70,75 @@ model Playlist {
 model Song {
   id Int @id @default(autoincrement())
 
-  name      String
-  author    String
-  album     String?
+  name   String
+  url    String
+  author String
+  album  String?
 
   image Image?
 
   owner_id Int
   owner    User @relation(fields: [owner_id], references: [id])
 
-  playlists Playlist[]
-
+  playlist_songs OrderedSong[]
   @@map("songs")
+}
+
+model Category {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  playlists OrderedPlaylist[]
+
+  owner_id Int
+  owner User @relation(fields: [owner_id], references: [id])
+
+  ordered_category OrderedCategory[]
+
+  @@map("categories")
+}
+
+model Chart {
+  id Int @id @default(autoincrement())
+
+  chart_page String @unique
+
+  categories OrderedCategory[]
+  trend_playlist Playlist?
+}
+
+model OrderedSong {
+  id Int @id @default(autoincrement())
+
+  playlist_id Int
+  playlist Playlist @relation(fields: [playlist_id], references: [id])
+
+  order Int 
+
+  song_id Int
+  song Song @relation(fields: [song_id], references: [id])
+}
+
+model OrderedPlaylist {
+  id Int @id @default(autoincrement())
+
+  category_id Int
+  category Category @relation(fields: [category_id], references: [id])
+
+  order Int 
+
+  playlist_id Int
+  playlist Playlist @relation(fields: [playlist_id], references: [id])
+}
+
+model OrderedCategory {
+  id Int @id @default(autoincrement())
+
+  chart_id Int
+  chart Chart @relation(fields: [chart_id], references: [id])
+
+  order Int
+
+  category_id Int
+  category Category @relation(fields: [category_id], references: [id])
 }

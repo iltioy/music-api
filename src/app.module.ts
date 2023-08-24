@@ -9,6 +9,8 @@ import { PlaylistsModule } from './playlists/playlists.module';
 import { SongsModule } from './songs/songs.module';
 import { FilesModule } from './files/files.module';
 import { AwsModule } from './aws/aws.module';
+import { ChartModule } from './chart/chart.module';
+import { CategoriesModule } from './categories/categories.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { AwsModule } from './aws/aws.module';
     SongsModule,
     FilesModule,
     AwsModule,
+    ChartModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

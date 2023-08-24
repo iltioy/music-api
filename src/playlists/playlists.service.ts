@@ -8,7 +8,11 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { createPlaylistDto } from './dto';
 import { updatePlaylistDto } from './dto';
 import { DEFAULT_PLAYLISY_IMAGE_URL } from 'src/constants';
-import { IMAGE_QUERY, USER_QUERY } from 'src/queries';
+import {
+  IMAGE_QUERY,
+  ORDERED_SONG_QUERY_SELECT,
+  USER_QUERY,
+} from 'src/queries';
 
 @Injectable()
 export class PlaylistsService {
@@ -27,7 +31,12 @@ export class PlaylistsService {
       include: {
         owner: USER_QUERY,
         image: IMAGE_QUERY,
-        songs: true,
+        songs: {
+          orderBy: {
+            order: 'desc',
+          },
+          select: ORDERED_SONG_QUERY_SELECT,
+        },
       },
     });
 
@@ -39,21 +48,7 @@ export class PlaylistsService {
   }
 
   async createPlaylist(userId: number, dto: createPlaylistDto) {
-    let songs: { id: number }[] | undefined;
     let playlistImage = this.defaultImage;
-
-    if (dto.songIds) {
-      songs = await this.prisma.song.findMany({
-        select: {
-          id: true,
-        },
-        where: {
-          id: {
-            in: dto.songIds,
-          },
-        },
-      });
-    }
 
     if (dto.image_key) {
       playlistImage = {
@@ -69,9 +64,6 @@ export class PlaylistsService {
           create: playlistImage,
         },
         owner_id: userId,
-        songs: {
-          connect: songs,
-        },
       },
       include: {
         owner: USER_QUERY,
@@ -91,16 +83,7 @@ export class PlaylistsService {
     playlistId: number,
     dto: updatePlaylistDto,
   ) {
-    const playlist = await this.prisma.playlist.findUnique({
-      where: {
-        id: playlistId,
-      },
-      include: {
-        image: IMAGE_QUERY,
-      },
-    });
-
-    if (!playlist) throw new NotFoundException();
+    const playlist = await this.checkIfPlaylistExists(playlistId);
 
     this.checkAccess(userId, playlist.owner_id);
 
@@ -111,21 +94,6 @@ export class PlaylistsService {
         image_key: dto.image_key,
         image_url: dto.image_url,
       };
-    }
-
-    let songs: { id: number }[] | undefined;
-
-    if (dto.songIds) {
-      songs = await this.prisma.song.findMany({
-        select: {
-          id: true,
-        },
-        where: {
-          id: {
-            in: dto.songIds,
-          },
-        },
-      });
     }
 
     const updatedPlaylist = await this.prisma.playlist.update({
@@ -139,13 +107,15 @@ export class PlaylistsService {
             data: playlistImage,
           },
         },
-        songs: {
-          set: songs,
-        },
       },
       include: {
         image: IMAGE_QUERY,
-        songs: true,
+        songs: {
+          orderBy: {
+            order: 'desc',
+          },
+          select: ORDERED_SONG_QUERY_SELECT,
+        },
         owner: USER_QUERY,
       },
     });
@@ -153,14 +123,86 @@ export class PlaylistsService {
     return updatedPlaylist;
   }
 
-  async deletePlaylist(userId: number, playlistId: number) {
-    const playlist = await this.prisma.playlist.findUnique({
+  async addSongToPlaylist(userId: number, playlistId: number, songId: number) {
+    const playlist = await this.checkIfPlaylistExists(playlistId);
+
+    this.checkAccess(userId, playlist.owner_id);
+
+    let isInPlaylist = false;
+    playlist.songs.map((song) =>
+      song.song_id === songId ? (isInPlaylist = true) : (isInPlaylist = false),
+    );
+
+    if (isInPlaylist) throw new BadRequestException();
+
+    const song = await this.prisma.song.findUnique({
       where: {
-        id: playlistId,
+        id: songId,
       },
     });
 
-    if (!playlist) throw new NotFoundException();
+    if (!song) throw new NotFoundException();
+
+    const updatedPlatlist = await this.prisma.playlist.update({
+      where: {
+        id: playlistId,
+      },
+      data: {
+        songs: {
+          create: {
+            order: playlist.songs.length + 1,
+            song_id: songId,
+          },
+        },
+      },
+      include: {
+        songs: {
+          orderBy: {
+            order: 'desc',
+          },
+          select: ORDERED_SONG_QUERY_SELECT,
+        },
+      },
+    });
+
+    return updatedPlatlist;
+  }
+
+  async removeSongFromPlaylist(
+    userId: number,
+    playlistId: number,
+    songId: number,
+  ) {
+    const playlist = await this.checkIfPlaylistExists(playlistId);
+
+    this.checkAccess(userId, playlist.owner_id);
+
+    const updatedPlaylist = await this.prisma.playlist.update({
+      where: {
+        id: playlistId,
+      },
+      data: {
+        songs: {
+          deleteMany: {
+            song_id: songId,
+          },
+        },
+      },
+      include: {
+        songs: {
+          orderBy: {
+            order: 'desc',
+          },
+          select: ORDERED_SONG_QUERY_SELECT,
+        },
+      },
+    });
+
+    return updatedPlaylist;
+  }
+
+  async deletePlaylist(userId: number, playlistId: number) {
+    const playlist = await this.checkIfPlaylistExists(playlistId);
 
     this.checkAccess(userId, playlist.owner_id);
 
@@ -171,6 +213,22 @@ export class PlaylistsService {
     });
 
     return deletedPlaylist;
+  }
+
+  async checkIfPlaylistExists(playlistId: number) {
+    const playlist = await this.prisma.playlist.findUnique({
+      where: {
+        id: playlistId,
+      },
+      include: {
+        songs: true,
+        image: IMAGE_QUERY,
+      },
+    });
+
+    if (!playlist) throw new NotFoundException();
+
+    return playlist;
   }
 
   checkAccess(userId: number, ownerId: number) {
