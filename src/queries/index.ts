@@ -13,12 +13,6 @@ const USER_QUERY = {
   },
 };
 
-const SELECT_USER_QUERY = {
-  username: true,
-  email: true,
-  image: IMAGE_QUERY,
-};
-
 const ORDERED_SONG_QUERY_SELECT = {
   order: true,
   song: {
@@ -44,6 +38,27 @@ const ORDERED_PLAYLISY_QUERY_SELECT = {
   },
 };
 
+const SELECT_USER_QUERY = {
+  id: true,
+  role: true,
+  username: true,
+  email: true,
+  image: IMAGE_QUERY,
+  playlists: {
+    select: {
+      name: true,
+      image: IMAGE_QUERY,
+    },
+  },
+  categories: {
+    select: {
+      playlists: {
+        select: ORDERED_PLAYLISY_QUERY_SELECT,
+      },
+      name: true,
+    },
+  },
+};
 
 export {
   IMAGE_QUERY,

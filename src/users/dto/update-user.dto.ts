@@ -12,8 +12,4 @@ export class updateUserDto {
   @IsOptional()
   @IsString()
   image_url?: string;
-
-  @IsOptional()
-  @IsString()
-  refresh_token?: string;
 }

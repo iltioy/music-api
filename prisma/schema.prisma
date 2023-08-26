@@ -57,8 +57,8 @@ model Playlist {
 
   image Image?
 
-  owner_id    Int
-  owner       User    @relation(fields: [owner_id], references: [id])
+  owner_id    Int?
+  owner       User?    @relation(fields: [owner_id], references: [id], onDelete: SetNull)
 
   is_favorite Boolean @default(false)
 
@@ -80,8 +80,8 @@ model Song {
 
   image Image?
 
-  owner_id Int
-  owner    User @relation(fields: [owner_id], references: [id])
+  owner_id Int?
+  owner    User? @relation(fields: [owner_id], references: [id], onDelete: SetNull)
 
   playlist_songs OrderedSong[]
   @@map("songs")
@@ -93,8 +93,8 @@ model Category {
 
   playlists OrderedPlaylist[]
 
-  owner_id Int
-  owner User @relation(fields: [owner_id], references: [id])
+  owner_id Int?
+  owner User? @relation(fields: [owner_id], references: [id], onDelete: SetNull)
 
   ordered_category OrderedCategory[]
 
@@ -114,37 +114,34 @@ model OrderedSong {
   id Int @id @default(autoincrement())
 
   playlist_id Int
-  playlist Playlist @relation(fields: [playlist_id], references: [id])
+  playlist Playlist @relation(fields: [playlist_id], references: [id], onDelete: Cascade)
 
   order Int 
 
-  song_id Int
-  song Song @relation(fields: [song_id], references: [id])
+  song_id Int?
+  song Song? @relation(fields: [song_id], references: [id], onDelete: SetNull)
 }
 
 model OrderedPlaylist {
   id Int @id @default(autoincrement())
 
   category_id Int
-  category Category @relation(fields: [category_id], references: [id])
+  category Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
 
   order Int 
 
-  playlist_id Int
-  playlist Playlist @relation(fields: [playlist_id], references: [id])
-
-  
-
+  playlist_id Int?
+  playlist Playlist? @relation(fields: [playlist_id], references: [id], onDelete: SetNull)
 }
 
 model OrderedCategory {
   id Int @id @default(autoincrement())
 
-  chart_id Int
-  chart Chart @relation(fields: [chart_id], references: [id])
+  chart_page String
+  chart Chart @relation(fields: [chart_page], references: [chart_page], onDelete: Cascade)
 
   order Int
 
-  category_id Int
-  category Category @relation(fields: [category_id], references: [id])
+  category_id Int?
+  category Category? @relation(fields: [category_id], references: [id], onDelete: SetNull)
 }

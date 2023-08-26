@@ -1,4 +1,11 @@
-import { Controller, Post, Body, HttpStatus, HttpCode, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  HttpStatus,
+  HttpCode,
+  Req,
+} from '@nestjs/common';
 import { AuthDto } from './dto';
 import { AuthService } from './auth.service';
 import { Request } from 'express';
@@ -18,10 +25,11 @@ export class AuthController {
   signin(@Body() dto: AuthDto) {
     return this.authService.signin(dto);
   }
-  
-  @Post("refresh")
+
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
   refreshTokens(@Req() request: Request) {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
-    return this.authService.refreshTokens(type, token)
+    return this.authService.refreshTokens(type, token);
   }
 }
