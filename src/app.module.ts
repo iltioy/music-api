@@ -11,6 +11,8 @@ import { FilesModule } from './files/files.module';
 import { AwsModule } from './aws/aws.module';
 import { ChartModule } from './chart/chart.module';
 import { CategoriesModule } from './categories/categories.module';
+import { MailerModule } from '@nestjs-modules/mailer';
+
 
 @Module({
   imports: [
@@ -26,6 +28,15 @@ import { CategoriesModule } from './categories/categories.module';
     AwsModule,
     ChartModule,
     CategoriesModule,
+    MailerModule.forRoot({
+      transport: {
+        service: "hotmail",
+        auth: {
+            user: "tema.illar@outlook.com",
+            pass: process.env.EMAIL_PASSWORD
+        }
+      }
+    })
   ],
   controllers: [AppController],
   providers: [AppService],

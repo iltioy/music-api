@@ -2,6 +2,9 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { UsersService } from 'src/users/users.service';
 import { AuthDto } from './dto';
@@ -28,7 +31,10 @@ export class AuthService {
       };
       const user = await this.usersService.createUser(createUserDto);
 
-      return this.signToken(user.id, user.email, user.username, user.role);
+      const tokens = await this.signTokens(user.id, user.email, user.username, user.role);
+      await this.updateRefreshToken(user.id, tokens.refresh_token)
+
+      return tokens
     } catch (error) {
       if (error.code === 'P2002') {
         throw new ForbiddenException('Credentials are already taken');
@@ -41,44 +47,98 @@ export class AuthService {
   }
 
   async signin(dto: AuthDto) {
-    const user = await this.prisma.user.findUnique({
-      where: {
-        email: dto.email,
-      },
-    });
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: {
+          email: dto.email,
+        },
+      });
+  
+      if (!user) {
+        throw new ForbiddenException('Credentials are incorrect!');
+      }
+  
+      const passworsMath = await argon.verify(user.hash, dto.password);
+  
+      if (!passworsMath) {
+        throw new ForbiddenException('Credentials are incorrect!');
+      }
+  
+      const tokens = await this.signTokens(user.id, user.email, user.username, user.role);
+      await this.updateRefreshToken(user.id, tokens.refresh_token)
 
-    if (!user) {
-      throw new ForbiddenException('Credentials are incorrect!');
+      return tokens
+    } catch (error) {
+      throw error
     }
 
-    const passworsMath = await argon.verify(user.hash, dto.password);
-
-    if (!passworsMath) {
-      throw new ForbiddenException('Credentials are incorrect!');
-    }
-
-    return this.signToken(user.id, user.email, user.username, user.role);
   }
 
-  async signToken(
+  async refreshTokens(type: string, refreshToken: string) {
+    try {
+      const {id: userId, email, username, role} = await this.jwt.verifyAsync(refreshToken, {
+        secret: process.env.JWT_SECRET_REFRESH
+      })
+
+      const user = await this.prisma.user.findUnique({
+        where: {
+          id: userId
+        }
+      })
+
+      const doMatch = await argon.verify(user.refresh_token, refreshToken)
+      if (!doMatch) throw new UnauthorizedException()
+
+      const tokens = await this.signTokens(userId, email, username, role)
+      await this.updateRefreshToken(userId, tokens.refresh_token)
+
+      return tokens
+    } catch (error) {
+      throw new UnauthorizedException()
+    }
+  }
+
+  async updateRefreshToken(userId: number, refreshToken: string) {
+    const hashedRefreshToken = await argon.hash(refreshToken)
+
+    await this.prisma.user.update({
+      where: {
+        id: userId
+      },
+      data: {
+        refresh_token: hashedRefreshToken
+      }
+    })
+  }
+
+  async signTokens(
     userId: number,
     email: string,
     username: string,
     role: string,
-  ): Promise<{ access_token: string }> {
+  ): Promise<{ access_token: string, refresh_token: string }> {
     const payload = {
       id: userId,
       email,
       username,
       role,
     };
-
-    const token = await this.jwt.signAsync(payload, {
-      expiresIn: '30m',
-      secret: process.env.JWT_SECRET,
-    });
+    const [access_token, refresh_token] = await Promise.all([
+      this.jwt.signAsync(payload, {
+        expiresIn: '30m',
+        secret: process.env.JWT_SECRET_ACCESS,
+      }),
+      this.jwt.signAsync(payload, {
+        expiresIn: '30d',
+        secret: process.env.JWT_SECRET_REFRESH,
+      })
+    ])
+  
     return {
-      access_token: token,
+      access_token,
+      refresh_token
     };
   }
+
+ 
 }

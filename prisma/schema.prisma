@@ -34,9 +34,12 @@ model User {
   username String @unique
   email    String @unique
   hash     String
+  refresh_token String?
   role String @default("user")
 
   image Image?
+
+  restore_password_link_id String?
 
   songs     Song[]
   playlists Playlist[]
@@ -54,15 +57,15 @@ model Playlist {
 
   image Image?
 
-  is_favorite Boolean @default(false)
   owner_id    Int
   owner       User    @relation(fields: [owner_id], references: [id])
 
+  is_favorite Boolean @default(false)
+
   songs OrderedSong[]
   categories OrderedPlaylist[]
-
-  chart_id Int? @unique
-  chart Chart? @relation(fields: [chart_id], references: [id])
+  chart_name String? @unique
+  chart Chart? @relation(fields: [chart_name], references: [chart_page])
 
   @@map("playlists")
 }
@@ -129,6 +132,9 @@ model OrderedPlaylist {
 
   playlist_id Int
   playlist Playlist @relation(fields: [playlist_id], references: [id])
+
+  
+
 }
 
 model OrderedCategory {

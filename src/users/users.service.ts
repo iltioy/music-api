@@ -1,23 +1,30 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { IMAGE_QUERY, USER_QUERY, SELECT_USER_QUERY } from 'src/queries';
+import { SELECT_USER_QUERY } from 'src/queries';
 import { updateUserDto } from './dto/update-user.dto';
 import { createUserDto } from './dto';
 import {
   DEFAULT_USER_IMAGE_URL,
   FAVORITE_PLAYLIST_ICON_URL,
+  PASSWORD_RECOVERY_LINK,
 } from 'src/constants';
+import { MailerService } from '@nestjs-modules/mailer';
+import { v4 as uuid } from 'uuid';
+import { restorePasswordDto, restorePasswordRequestDto } from './dto/restore-password.dto';
+import * as argon from "argon2"
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private mailService: MailerService) {}
 
   async createUser(dto: createUserDto) {
     try {
+
       const userCountQuery = await this.prisma.user.aggregate({
         _count: {
           _all: true,
@@ -54,11 +61,11 @@ export class UsersService {
 
       return user;
     } catch (error) {
-      throw error;
+      throw error
     }
   }
 
-  async getUser(username: string) {
+  async getUserByUsername(username: string) {
     const user = await this.prisma.user.findUnique({
       where: {
         username,
@@ -97,5 +104,68 @@ export class UsersService {
     }
 
     return updatedUser;
+  }
+
+  async restorePasswordCreateLink(dto: restorePasswordRequestDto) {
+    try {
+      const link_id = uuid()
+
+      const user = await this.prisma.user.findUnique({
+        where: {
+          email: dto.email
+        }
+      })
+  
+      if (!user) throw new NotFoundException()
+      
+      await this.prisma.user.update({
+        where: {
+          email: dto.email
+        },
+        data: {
+          restore_password_link_id: link_id
+        }
+      })
+
+      await this.mailService.sendMail({
+        to: dto.email,
+        from: "tema.illar@outlook.com",
+        subject: "Password Recovery",
+        text: `Your password recovery link: ${PASSWORD_RECOVERY_LINK}/${link_id}`
+      })
+
+      return {success: true}
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async restorePassword(recovery_link_id: string, dto: restorePasswordDto) {
+    try {
+      const user = await this.prisma.user.findUnique({
+        where: {
+          email: dto.email
+        }
+      })
+
+      if (!user) throw new NotFoundException()
+  
+      if (user.restore_password_link_id !== recovery_link_id) throw new ForbiddenException()
+  
+      const hash = await argon.hash(dto.password)
+      await this.prisma.user.update({
+        where: {
+          email: dto.email
+        },
+        data: {
+          restore_password_link_id: null,
+          hash
+        }
+      })
+
+      return {success: true}
+    } catch (error) {
+      throw error
+    }
   }
 }

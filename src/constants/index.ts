@@ -6,10 +6,12 @@ const DEFAULT_PLAYLISY_IMAGE_URL =
   'https://yt3.googleusercontent.com/ytc/AGIKgqM22K_cwKVZZV9pbZckOwelZ0wBcQF6n3V4mitv=s900-c-k-c0x00ffffff-no-rj';
 const FAVORITE_PLAYLIST_ICON_URL =
   'https://music.yandex.ru/blocks/playlist-cover/playlist-cover_like.png';
+const PASSWORD_RECOVERY_LINK = "localhost:5000/users/password/recover"
 
 export {
   DEFAULT_MUSIC_IMAGE_URL,
   DEFAULT_USER_IMAGE_URL,
   DEFAULT_PLAYLISY_IMAGE_URL,
   FAVORITE_PLAYLIST_ICON_URL,
+  PASSWORD_RECOVERY_LINK
 };
