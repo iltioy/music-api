@@ -16,7 +16,7 @@ export class createSongDto {
 
   @IsString()
   @IsOptional()
-  album: string;
+  album?: string;
 
   @IsString()
   @IsOptional()

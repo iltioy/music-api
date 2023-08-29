@@ -38,27 +38,19 @@ export class SongsService {
   }
 
   async getRandomSong() {
-    const songsCountQuery = await this.prisma.song.aggregate({
-      _count: {
-        _all: true,
-      },
-    });
+    const songsCount = await this.prisma.song.count();
+    const skip = Math.floor(Math.random() * songsCount);
 
-    const songsCount = songsCountQuery._count._all;
-
-    const randomSongId = Math.floor(Math.random() * songsCount + 1);
-
-    const randomSong = await this.prisma.song.findUnique({
-      where: {
-        id: randomSongId,
-      },
+    const randomSong = await this.prisma.song.findMany({
+      take: 1,
+      skip: skip,
       include: {
         image: IMAGE_QUERY,
         owner: USER_QUERY,
       },
     });
 
-    return randomSong;
+    return randomSong[0];
   }
 
   async createSong(userId: number, dto: createSongDto) {

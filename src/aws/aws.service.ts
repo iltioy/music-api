@@ -25,7 +25,7 @@ export class AwsService {
       Key: new Date().toISOString().replace(/:/g, '-') + file.originalname,
       ContentType: file.mimetype,
     };
-    console.log(uploadParams);
+    // console.log(uploadParams);
     return this.s3.upload(uploadParams).promise();
   }
 

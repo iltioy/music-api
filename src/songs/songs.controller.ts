@@ -27,7 +27,7 @@ export class SongsController {
     return this.songsService.getSong(songId);
   }
 
-  @Get('random')
+  @Get('get/random')
   @HttpCode(HttpStatus.OK)
   getRandomSong() {
     return this.songsService.getRandomSong();

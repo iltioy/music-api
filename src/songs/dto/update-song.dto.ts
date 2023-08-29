@@ -12,7 +12,7 @@ export class updateSongDto {
 
   @IsString()
   @IsOptional()
-  album: string;
+  album?: string;
 
   @IsString()
   @IsOptional()
