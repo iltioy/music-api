@@ -8,7 +8,7 @@ import {
 
 export class createPlaylistDto {
   @IsString()
-  @Length(0, 50)
+  @Length(1, 50)
   @IsNotEmpty()
   name: string;
 

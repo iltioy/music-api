@@ -44,11 +44,8 @@ const SELECT_USER_QUERY = {
   username: true,
   email: true,
   image: IMAGE_QUERY,
-  playlists: {
-    select: {
-      name: true,
-      image: IMAGE_QUERY,
-    },
+  added_playlists: {
+    select: ORDERED_PLAYLISY_QUERY_SELECT,
   },
   categories: {
     select: {

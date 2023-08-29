@@ -31,14 +31,20 @@ export class AuthService {
       };
       const user = await this.usersService.createUser(createUserDto);
 
-      const tokens = await this.signTokens(user.id, user.email, user.username, user.role);
-      await this.updateRefreshToken(user.id, tokens.refresh_token)
+      const tokens = await this.signTokens(
+        user.id,
+        user.email,
+        user.username,
+        user.role,
+      );
+      await this.updateRefreshToken(user.id, tokens.refresh_token);
 
-      return tokens
+      return tokens;
     } catch (error) {
       if (error.code === 'P2002') {
         throw new ForbiddenException('Credentials are already taken');
       }
+      console.log(error);
 
       throw new BadRequestException(
         'An error occured while processing your request',
@@ -53,62 +59,71 @@ export class AuthService {
           email: dto.email,
         },
       });
-  
+
       if (!user) {
         throw new ForbiddenException('Credentials are incorrect!');
       }
-  
+
       const passworsMath = await argon.verify(user.hash, dto.password);
-  
+
       if (!passworsMath) {
         throw new ForbiddenException('Credentials are incorrect!');
       }
-  
-      const tokens = await this.signTokens(user.id, user.email, user.username, user.role);
-      await this.updateRefreshToken(user.id, tokens.refresh_token)
 
-      return tokens
+      const tokens = await this.signTokens(
+        user.id,
+        user.email,
+        user.username,
+        user.role,
+      );
+      await this.updateRefreshToken(user.id, tokens.refresh_token);
+
+      return tokens;
     } catch (error) {
-      throw error
+      throw error;
     }
-
   }
 
   async refreshTokens(type: string, refreshToken: string) {
     try {
-      const {id: userId, email, username, role} = await this.jwt.verifyAsync(refreshToken, {
-        secret: process.env.JWT_SECRET_REFRESH
-      })
+      const {
+        id: userId,
+        email,
+        username,
+        role,
+      } = await this.jwt.verifyAsync(refreshToken, {
+        secret: process.env.JWT_SECRET_REFRESH,
+      });
 
       const user = await this.prisma.user.findUnique({
         where: {
-          id: userId
-        }
-      })
+          id: userId,
+        },
+      });
 
-      const doMatch = await argon.verify(user.refresh_token, refreshToken)
-      if (!doMatch) throw new UnauthorizedException()
+      const doMatch = await argon.verify(user.refresh_token, refreshToken);
+      if (!doMatch) throw new UnauthorizedException();
 
-      const tokens = await this.signTokens(userId, email, username, role)
-      await this.updateRefreshToken(userId, tokens.refresh_token)
+      const tokens = await this.signTokens(userId, email, username, role);
+      await this.updateRefreshToken(userId, tokens.refresh_token);
 
-      return tokens
+      return tokens;
     } catch (error) {
-      throw new UnauthorizedException()
+      throw new UnauthorizedException();
     }
   }
 
   async updateRefreshToken(userId: number, refreshToken: string) {
-    const hashedRefreshToken = await argon.hash(refreshToken)
+    const hashedRefreshToken = await argon.hash(refreshToken);
 
     await this.prisma.user.update({
       where: {
-        id: userId
+        id: userId,
       },
       data: {
-        refresh_token: hashedRefreshToken
-      }
-    })
+        refresh_token: hashedRefreshToken,
+      },
+    });
   }
 
   async signTokens(
@@ -116,7 +131,7 @@ export class AuthService {
     email: string,
     username: string,
     role: string,
-  ): Promise<{ access_token: string, refresh_token: string }> {
+  ): Promise<{ access_token: string; refresh_token: string }> {
     const payload = {
       id: userId,
       email,
@@ -131,14 +146,12 @@ export class AuthService {
       this.jwt.signAsync(payload, {
         expiresIn: '30d',
         secret: process.env.JWT_SECRET_REFRESH,
-      })
-    ])
-  
+      }),
+    ]);
+
     return {
       access_token,
-      refresh_token
+      refresh_token,
     };
   }
-
- 
 }

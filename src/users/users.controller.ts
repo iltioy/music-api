@@ -39,6 +39,27 @@ export class UsersController {
     return this.userService.updateUser(userId, dto);
   }
 
+  @UseGuards(AuthGuard)
+  @Patch('playlists/add/:playlistId')
+  addPlaylistToUserCollection(
+    @GetUser('id') userId: number,
+    @Param('playlistId', ParseIntPipe) playlistId: number,
+  ) {
+    return this.userService.addPlaylistToUserCollection(userId, playlistId);
+  }
+
+  @UseGuards(AuthGuard)
+  @Delete('playlists/remove/:playlistId')
+  removePlaylistFromUserCollection(
+    @GetUser('id') userId: number,
+    @Param('playlistId', ParseIntPipe) playlistId: number,
+  ) {
+    return this.userService.removePlaylistFromUserCollection(
+      userId,
+      playlistId,
+    );
+  }
+
   @Post('password/recover')
   restorePasswordCreateLink(@Body() dto: restorePasswordRequestDto) {
     return this.userService.restorePasswordCreateLink(dto);

@@ -40,9 +40,11 @@ model User {
   image Image?
 
   restore_password_link_id String?
+  
+  added_playlists OrderedPlaylist[]
 
-  songs     Song[]
-  playlists Playlist[]
+  songs     Song[] 
+  owned_playlists Playlist[] @relation("owned_playlists")
   categories Category[]
 
   createdAt DateTime @default(now())
@@ -58,12 +60,12 @@ model Playlist {
   image Image?
 
   owner_id    Int?
-  owner       User?    @relation(fields: [owner_id], references: [id], onDelete: SetNull)
+  owner       User?    @relation(fields: [owner_id], references: [id], onDelete: SetNull, name: "owned_playlists")
 
   is_favorite Boolean @default(false)
 
   songs OrderedSong[]
-  categories OrderedPlaylist[]
+  ordered_playlists OrderedPlaylist[]
   chart_name String? @unique
   chart Chart? @relation(fields: [chart_name], references: [chart_page])
 
@@ -125,8 +127,11 @@ model OrderedSong {
 model OrderedPlaylist {
   id Int @id @default(autoincrement())
 
-  category_id Int
-  category Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  category_id Int?
+  category Category? @relation(fields: [category_id], references: [id], onDelete: SetNull)
+
+  user_id Int?
+  user User[]
 
   order Int 
 

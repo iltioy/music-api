@@ -24,52 +24,70 @@ import {
   restorePasswordRequestDto,
 } from './dto/restore-password.dto';
 import * as argon from 'argon2';
+import { PlaylistsService } from 'src/playlists/playlists.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     private prisma: PrismaService,
     private mailService: MailerService,
+    private playlistsService: PlaylistsService,
   ) {}
 
   async createUser(dto: createUserDto) {
     try {
-      const userCountQuery = await this.prisma.user.aggregate({
-        _count: {
-          _all: true,
+      const maxUserIdQuery = await this.prisma.user.aggregate({
+        _max: {
+          id: true,
         },
       });
 
-      const usersCount = userCountQuery._count._all;
+      let maxUserId = maxUserIdQuery._max.id;
+
+      if (!maxUserId) {
+        maxUserId = 0;
+      }
 
       const user = await this.prisma.user.create({
         data: {
           email: dto.email,
           hash: dto.hash,
-          username: `User${usersCount}`,
+          username: `User${maxUserId + 1}`,
           image: {
             create: {
               image_key: null,
               image_url: DEFAULT_USER_IMAGE_URL,
             },
           },
-          playlists: {
+        },
+        select: SELECT_USER_QUERY,
+      });
+
+      const iLikePlaylist = await this.playlistsService.createPlaylist(
+        user.id,
+        {
+          name: 'Мне нравится',
+          image_key: null,
+          image_url: FAVORITE_PLAYLIST_ICON_URL,
+        },
+      );
+
+      const updatedUser = await this.prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          added_playlists: {
             create: {
-              name: 'Мне нравится',
-              is_favorite: true,
-              image: {
-                create: {
-                  image_key: null,
-                  image_url: FAVORITE_PLAYLIST_ICON_URL,
-                },
-              },
+              order: 1,
+              playlist_id: iLikePlaylist.id,
             },
           },
         },
         select: SELECT_USER_QUERY,
       });
 
-      return user;
+      return updatedUser;
     } catch (error) {
       throw error;
     }
@@ -156,6 +174,65 @@ export class UsersService {
     } catch (error) {
       throw error;
     }
+  }
+
+  async addPlaylistToUserCollection(userId: number, playlistId: number) {
+    await this.playlistsService.getPlaylist(playlistId);
+
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      include: {
+        added_playlists: true,
+      },
+    });
+
+    let isInCollection = false;
+    user.added_playlists.map((playlist) =>
+      playlist.playlist_id === playlistId
+        ? (isInCollection = true)
+        : (isInCollection = false),
+    );
+
+    if (isInCollection) throw new BadRequestException();
+
+    const updatedUser = await this.prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        added_playlists: {
+          create: {
+            order: user.added_playlists.length + 1,
+            playlist_id: playlistId,
+          },
+        },
+      },
+      select: SELECT_USER_QUERY,
+    });
+
+    return updatedUser;
+  }
+
+  async removePlaylistFromUserCollection(userId: number, playlistId: number) {
+    await this.playlistsService.getPlaylist(playlistId);
+
+    const updatedUser = await this.prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        added_playlists: {
+          deleteMany: {
+            playlist_id: playlistId,
+          },
+        },
+      },
+      select: SELECT_USER_QUERY,
+    });
+
+    return updatedUser;
   }
 
   async restorePassword(recovery_link_id: string, dto: restorePasswordDto) {

@@ -8,6 +8,7 @@ import * as path from 'path';
 import { Prisma, User } from '@prisma/client';
 import * as argon from 'argon2';
 import { createSongDto } from 'src/songs/dto';
+import { createPlaylistDto } from 'src/playlists/dto';
 
 describe('App e2e', () => {
   let app: INestApplication;
@@ -222,19 +223,21 @@ describe('App e2e', () => {
       it('Should fail searching not existing user', () => {
         return pactum.spec().get('/users/asfj').expectStatus(404);
       });
-      it('Should get user', () => {
-        return pactum.spec().get('/users/User1').expectStatus(200).inspect();
-      });
 
       it('Should get current user', () => {
         return pactum
           .spec()
           .get('/users/get/me')
           .withHeaders({
-            Authorization: 'Bearer $S{accToken}',
+            Authorization: 'Bearer $S{accToken2}',
           })
           .expectStatus(200)
-          .expectBodyContains('username');
+          .expectBodyContains('username')
+          .stores('usrName', 'username');
+      });
+
+      it('Should get user', () => {
+        return pactum.spec().get('/users/$S{usrName}').expectStatus(200);
       });
     });
 
@@ -274,7 +277,7 @@ describe('App e2e', () => {
             Authorization: 'Bearer $S{accToken}',
           })
           .withBody({
-            username: 'User1',
+            username: '$S{usrName}',
             image_key: 'lalalla',
             image_url: 'lol',
           })
@@ -476,6 +479,23 @@ describe('App e2e', () => {
           .expectStatus(201)
           .stores('songId', 'id');
       });
+
+      it('Should create a second song', () => {
+        return pactum
+          .spec()
+          .withBody({
+            album: createSongDto.album,
+            name: createSongDto.name,
+            author: createSongDto.author,
+            url: createSongDto.url,
+          })
+          .post('/songs/create')
+          .withHeaders({
+            Authorization: 'Bearer $S{accToken}',
+          })
+          .expectStatus(201)
+          .stores('songId2', 'id');
+      });
     });
 
     describe('Update a song', () => {
@@ -564,5 +584,235 @@ describe('App e2e', () => {
     });
   });
 
-  todo('todo');
+  describe('Playlists', () => {
+    const createPlaylistDto: createPlaylistDto = {
+      name: 'playlist1',
+    };
+
+    describe('Create a playlist', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .post('/playlists/create')
+          .withBody(createPlaylistDto)
+          .expectStatus(401);
+      });
+
+      it('Should fail without playlist name', () => {
+        return pactum
+          .spec()
+          .post('/playlists/create')
+          .withBearerToken('$S{accToken}')
+          .expectStatus(400);
+      });
+
+      it('Should create a playlist', () => {
+        return pactum
+          .spec()
+          .post('/playlists/create')
+          .withBearerToken('$S{accToken}')
+          .withBody(createPlaylistDto)
+          .expectStatus(201)
+          .stores('playlistId', 'id');
+      });
+    });
+
+    describe('Get a playlist', () => {
+      it('Should get a playlist by id', () => {
+        return pactum
+          .spec()
+          .get('/playlists/$S{playlistId}')
+          .expectStatus(200)
+          .expectBodyContains('songs');
+      });
+    });
+
+    describe('Update playlist', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .patch('/playlists/update/$S{playlistId}')
+          .withBody({
+            name: 'dance',
+          })
+          .expectStatus(401);
+      });
+
+      it('Should fail for different user', () => {
+        return pactum
+          .spec()
+          .patch('/playlists/update/$S{playlistId}')
+          .withBody({
+            name: 'dance',
+          })
+          .withBearerToken('$S{accToken2}')
+          .expectStatus(403);
+      });
+
+      it('Should update playlist name', () => {
+        return pactum
+          .spec()
+          .patch('/playlists/update/$S{playlistId}')
+          .withBody({
+            name: 'dance',
+          })
+          .withBearerToken('$S{accToken}')
+          .expectStatus(200);
+      });
+    });
+
+    describe('Add song to playlist', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .patch('/playlists/$S{playlistId}/song/add/$S{songId2}')
+          .expectStatus(401);
+      });
+
+      it('Should fail for different user', () => {
+        return pactum
+          .spec()
+          .patch('/playlists/$S{playlistId}/song/add/$S{songId2}')
+          .withBearerToken('$S{accToken2}')
+          .expectStatus(403);
+      });
+
+      it('Should update playlist songs', () => {
+        return pactum
+          .spec()
+          .patch('/playlists/$S{playlistId}/song/add/$S{songId2}')
+          .withBearerToken('$S{accToken}')
+          .expectStatus(200)
+          .expectJsonLength('songs', 1);
+      });
+
+      it('Should not add the same song twice', () => {
+        return pactum
+          .spec()
+          .patch('/playlists/$S{playlistId}/song/add/$S{songId2}')
+          .withBearerToken('$S{accToken}')
+          .expectStatus(400);
+      });
+    });
+
+    describe('Remove a song from playlist', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .delete('/playlists/$S{playlistId}/song/remove/$S{songId2}')
+          .expectStatus(401);
+      });
+
+      it('Should fail for different user', () => {
+        return pactum
+          .spec()
+          .delete('/playlists/$S{playlistId}/song/remove/$S{songId2}')
+          .withBearerToken('$S{accToken2}')
+          .expectStatus(403);
+      });
+
+      it('Should update playlist songs (remove)', () => {
+        return pactum
+          .spec()
+          .delete('/playlists/$S{playlistId}/song/remove/$S{songId2}')
+          .withBearerToken('$S{accToken}')
+          .expectStatus(200)
+          .expectJsonLength('songs', 0);
+      });
+    });
+
+    describe("Add playylist to user's collection", () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .patch('/users/playlists/add/$S{playlistId}')
+          .expectStatus(401);
+      });
+
+      it("Should add playlist to user's collection", () => {
+        return pactum
+          .spec()
+          .patch('/users/playlists/add/$S{playlistId}')
+          .withBearerToken('$S{accToken2}')
+          .expectStatus(200)
+          .inspect()
+          .expectJsonLength('added_playlists', 2);
+      });
+
+      it("Should not add the same playlist to user's collection", () => {
+        return pactum
+          .spec()
+          .patch('/users/playlists/add/$S{playlistId}')
+          .withBearerToken('$S{accToken2}')
+          .expectStatus(400);
+      });
+    });
+
+    describe("Remove playlist from user's collection", () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .delete('/users/playlists/remove/$S{playlistId}')
+          .expectStatus(401);
+      });
+
+      it("Should remove playlist from user's collection", () => {
+        return pactum
+          .spec()
+          .delete('/users/playlists/remove/$S{playlistId}')
+          .withBearerToken('$S{accToken2}')
+          .expectStatus(200)
+          .inspect()
+          .expectJsonLength('added_playlists', 1);
+      });
+    });
+
+    describe('Delete playlist', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .delete('/playlists/delete/$S{playlistId}')
+          .expectStatus(401);
+      });
+
+      it('Should fail for different user', () => {
+        return pactum
+          .spec()
+          .delete('/playlists/delete/$S{playlistId}')
+          .withBearerToken('$S{accToken2}')
+          .expectStatus(403);
+      });
+
+      it('Should delete playlist', () => {
+        return pactum
+          .spec()
+          .delete('/playlists/delete/$S{playlistId}')
+          .withBearerToken('$S{accToken}')
+          .expectStatus(200);
+      });
+
+      it('Should fail getting deleted playlist by id', () => {
+        return pactum.spec().get('/playlists/$S{playlistId}').expectStatus(404);
+      });
+    });
+
+    afterAll(async () => {
+      await pactum
+        .spec()
+        .post('/playlists/create')
+        .withBody({
+          name: 'playlist2',
+        })
+        .stores('playlistId2', 'id');
+
+      await pactum
+        .spec()
+        .patch('/playlists/$S{playlistId}/song/add/$S{songId2}')
+        .withBearerToken('$S{accToken}');
+    });
+  });
+
+  // describe("Categories", () => {
+
+  // })
 });
