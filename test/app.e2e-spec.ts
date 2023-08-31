@@ -9,6 +9,9 @@ import { Prisma, User } from '@prisma/client';
 import * as argon from 'argon2';
 import { createSongDto } from 'src/songs/dto';
 import { createPlaylistDto } from 'src/playlists/dto';
+import { createCategoryDto, updateCategoryDto } from 'src/categories/dto';
+import { createChartDto } from 'src/chart/dto';
+import { updateChartDto } from 'src/chart/dto/update-chart.dto';
 
 describe('App e2e', () => {
   let app: INestApplication;
@@ -615,6 +618,26 @@ describe('App e2e', () => {
           .expectStatus(201)
           .stores('playlistId', 'id');
       });
+
+      it('Should create playlist', () => {
+        return pactum
+          .spec()
+          .post('/playlists/create')
+          .withBody({
+            name: 'playlist2',
+          })
+          .withBearerToken('$S{accToken}')
+          .expectStatus(201)
+          .stores('playlistId2', 'id');
+      });
+
+      it('Should add the song to the playlist', () => {
+        return pactum
+          .spec()
+          .patch('/playlists/$S{playlistId2}/song/add/$S{songId2}')
+          .withBearerToken('$S{accToken}')
+          .expectStatus(200);
+      });
     });
 
     describe('Get a playlist', () => {
@@ -795,24 +818,379 @@ describe('App e2e', () => {
         return pactum.spec().get('/playlists/$S{playlistId}').expectStatus(404);
       });
     });
+  });
 
-    afterAll(async () => {
-      await pactum
-        .spec()
-        .post('/playlists/create')
-        .withBody({
-          name: 'playlist2',
-        })
-        .stores('playlistId2', 'id');
+  describe('Categories', () => {
+    const createCategoryDto: createCategoryDto = {
+      name: 'Понравившиеся',
+    };
 
-      await pactum
-        .spec()
-        .patch('/playlists/$S{playlistId}/song/add/$S{songId2}')
-        .withBearerToken('$S{accToken}');
+    const updateCategoryDto: updateCategoryDto = {
+      name: 'Палумба',
+    };
+
+    describe('Create category', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .post('/categories/create')
+          .withBody(createCategoryDto)
+          .expectStatus(401)
+          .inspect();
+      });
+
+      it('Should fail without body', () => {
+        return pactum
+          .spec()
+          .post('/categories/create')
+          .withBearerToken('$S{adminAccToken}')
+          .expectStatus(400)
+          .inspect();
+      });
+
+      it('Should create a category', () => {
+        return pactum
+          .spec()
+          .post('/categories/create')
+          .withBearerToken('$S{adminAccToken}')
+          .withBody(createCategoryDto)
+          .expectStatus(201)
+          .expectBodyContains('name')
+          .stores('categoryId', 'id');
+      });
+
+      it('Should create test category', () => {
+        return pactum
+          .spec()
+          .post('/categories/create')
+          .withBearerToken('$S{adminAccToken}')
+          .withBody(createCategoryDto)
+          .expectStatus(201)
+          .expectBodyContains('name')
+          .stores('categoryId2', 'id');
+      });
+    });
+
+    describe('Get category by id', () => {
+      it('Should fail for unknown category', () => {
+        return pactum.spec().get('/categories/986945').expectStatus(404);
+      });
+
+      it('Should get category', () => {
+        return pactum
+          .spec()
+          .get('/categories/$S{categoryId}')
+          .expectStatus(200)
+          .expectBodyContains('name');
+      });
+    });
+
+    describe('Update category name', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .patch('/categories/update/$S{categoryId}')
+          .withBody(updateCategoryDto)
+          .expectStatus(401);
+      });
+
+      it('Should fail for different user', () => {
+        return pactum
+          .spec()
+          .patch('/categories/update/$S{categoryId}')
+          .withBearerToken('$S{accToken}')
+          .withBody(updateCategoryDto)
+          .expectStatus(403);
+      });
+
+      it('Should update category name', () => {
+        return pactum
+          .spec()
+          .patch('/categories/update/$S{categoryId}')
+          .withBearerToken('$S{adminAccToken}')
+          .withBody(updateCategoryDto)
+          .expectStatus(200)
+          .expectBodyContains(updateCategoryDto.name);
+      });
+    });
+
+    describe('Add playlist to category', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .patch('/categories/1/playlist/add/1')
+          .expectStatus(401);
+      });
+
+      it('Should fail for different user', () => {
+        return pactum
+          .spec()
+          .patch('/categories/$S{categoryId}/playlist/add/$S{playlistId2}')
+          .withBearerToken('$S{accToken}')
+          .expectStatus(403);
+      });
+
+      it('Should add playlist to category', () => {
+        return pactum
+          .spec()
+          .patch('/categories/$S{categoryId}/playlist/add/$S{playlistId2}')
+          .withBearerToken('$S{adminAccToken}')
+          .expectStatus(200)
+          .expectJsonLength('playlists', 1);
+      });
+
+      it('Should not allow adding the same playlist twice', () => {
+        return pactum
+          .spec()
+          .patch('/categories/$S{categoryId}/playlist/add/$S{playlistId2}')
+          .withBearerToken('$S{adminAccToken}')
+          .expectStatus(400);
+      });
+    });
+
+    describe('Remove playlist from category', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .delete('/categories/$S{categoryId}/playlist/remove/$S{playlistId2}')
+          .expectStatus(401);
+      });
+
+      it('Should fail for different user', () => {
+        return pactum
+          .spec()
+          .delete('/categories/$S{categoryId}/playlist/remove/$S{playlistId2}')
+          .withBearerToken('$S{accToken}')
+          .expectStatus(403);
+      });
+
+      it('Should remove playlist from category', () => {
+        return pactum
+          .spec()
+          .delete('/categories/$S{categoryId}/playlist/remove/$S{playlistId2}')
+          .withBearerToken('$S{adminAccToken}')
+          .expectStatus(200)
+          .expectJsonLength('playlists', 0);
+      });
+    });
+
+    describe('Delete category', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .delete('/categories/delete/$S{categoryId}')
+          .expectStatus(401);
+      });
+
+      it('Should fail for different user', () => {
+        return pactum
+          .spec()
+          .delete('/categories/delete/$S{categoryId}')
+          .withBearerToken('$S{accToken}')
+          .expectStatus(403);
+      });
+
+      it('Should delte the category', () => {
+        return pactum
+          .spec()
+          .delete('/categories/delete/$S{categoryId}')
+          .withBearerToken('$S{adminAccToken}')
+          .expectStatus(200);
+      });
     });
   });
 
-  // describe("Categories", () => {
+  describe('Chart', () => {
+    const createChartDto: createChartDto = {
+      name: 'Новинки',
+    };
 
-  // })
+    const updateChartDto: updateChartDto = {
+      name: 'Поп',
+    };
+
+    describe('Create chart', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .post('/chart/create')
+          .withBody(createChartDto)
+          .expectStatus(401);
+      });
+
+      it('Should fail for non-admin user', () => {
+        return pactum
+          .spec()
+          .post('/chart/create')
+          .withBody(createChartDto)
+          .withBearerToken('$S{accToken}')
+          .expectStatus(403);
+      });
+
+      it('Should fail without body', () => {
+        return pactum
+          .spec()
+          .post('/chart/create')
+          .withBearerToken('$S{adminAccToken}')
+          .expectStatus(400);
+      });
+
+      it('Should create a chart', () => {
+        return pactum
+          .spec()
+          .post('/chart/create')
+          .withBearerToken('$S{adminAccToken}')
+          .withBody(createChartDto)
+          .stores('chartName', 'chart_page')
+          .expectStatus(201);
+      });
+    });
+
+    describe('Get chart', () => {
+      it('Should fail gettint unknown chart', () => {
+        return pactum.spec().get('/chart/makaka').expectStatus(404);
+      });
+
+      it('Should get the chart by name', () => {
+        return pactum.spec().get('/chart/$S{chartName}').expectStatus(200);
+      });
+    });
+
+    describe('Update the chart', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .patch('/chart/update/$S{chartName}')
+          .expectStatus(401);
+      });
+
+      it('Should fail for non-admin user', () => {
+        return pactum
+          .spec()
+          .patch('/chart/update/$S{chartName}')
+          .withBearerToken('$S{accToken}')
+          .expectStatus(403);
+      });
+
+      it('Should create a chart', () => {
+        return pactum
+          .spec()
+          .patch('/chart/update/$S{chartName}')
+          .withBearerToken('$S{adminAccToken}')
+          .withBody(updateChartDto)
+          .stores('chartName2', 'chart_page')
+          .expectStatus(200);
+      });
+    });
+
+    describe('Add category to the chart', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .patch('/chart/$S{chartName2}/category/add/$S{categoryId2}')
+          .expectStatus(401);
+      });
+
+      it('Should fail for non-admin user', () => {
+        return pactum
+          .spec()
+          .patch('/chart/$S{chartName2}/category/add/$S{categoryId2}')
+          .withBearerToken('$S{accToken}')
+          .expectStatus(403);
+      });
+
+      it('Should add category to the chart', () => {
+        return pactum
+          .spec()
+          .patch('/chart/$S{chartName2}/category/add/$S{categoryId2}')
+          .withBearerToken('$S{adminAccToken}')
+          .expectStatus(200)
+          .expectJsonLength('categories', 1);
+      });
+
+      it('Should not alllow to add the same category to the chart', () => {
+        return pactum
+          .spec()
+          .patch('/chart/$S{chartName2}/category/add/$S{categoryId2}')
+          .withBearerToken('$S{adminAccToken}')
+          .expectStatus(400);
+      });
+    });
+
+    describe('Remove category from the chart', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .delete('/chart/$S{chartName2}/category/remove/$S{categoryId2}')
+          .expectStatus(401);
+      });
+
+      it('Should fail for non-admin user', () => {
+        return pactum
+          .spec()
+          .delete('/chart/$S{chartName2}/category/remove/$S{categoryId2}')
+          .withBearerToken('$S{accToken}')
+          .expectStatus(403);
+      });
+
+      it('Should remove category from the chart', () => {
+        return pactum
+          .spec()
+          .delete('/chart/$S{chartName2}/category/remove/$S{categoryId2}')
+          .withBearerToken('$S{adminAccToken}')
+          .expectStatus(200)
+          .expectJsonLength('categories', 0);
+      });
+    });
+
+    describe('Add playlist to the chart', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .patch('/chart/$S{chartName2}/playlist/add/$S{playlistId2}')
+          .expectStatus(401);
+      });
+
+      it('Should fail for non-admin user', () => {
+        return pactum
+          .spec()
+          .patch('/chart/$S{chartName2}/playlist/add/$S{playlistId2}')
+          .withBearerToken('$S{accToken}')
+          .expectStatus(403);
+      });
+
+      it('Should add playlist to the chart', () => {
+        return pactum
+          .spec()
+          .patch('/chart/$S{chartName2}/playlist/add/$S{playlistId2}')
+          .withBearerToken('$S{adminAccToken}')
+          .expectStatus(200);
+      });
+    });
+
+    describe('Delete the chart', () => {
+      it('Should fail without auth', () => {
+        return pactum
+          .spec()
+          .delete('/chart/delete/$S{chartName}')
+          .expectStatus(401);
+      });
+
+      it('Should fail for non-admin user', () => {
+        return pactum
+          .spec()
+          .delete('/chart/delete/$S{chartName}')
+          .withBearerToken('$S{accToken}')
+          .expectStatus(403);
+      });
+
+      it('Should delete the chart', () => {
+        return pactum
+          .spec()
+          .delete('/chart/delete/$S{chartName2}')
+          .withBearerToken('$S{adminAccToken}')
+          .expectStatus(200);
+      });
+    });
+  });
 });

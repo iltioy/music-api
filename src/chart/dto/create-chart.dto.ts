@@ -4,8 +4,4 @@ export class createChartDto {
   @IsString()
   @IsNotEmpty()
   name: string;
-
-  @IsOptional()
-  @IsInt({ each: true })
-  categoriesIds;
 }

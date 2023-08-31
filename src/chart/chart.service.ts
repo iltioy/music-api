@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { createChartDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { updateChartDto } from './dto/update-chart.dto';
@@ -8,13 +12,20 @@ export class ChartService {
   constructor(private prisma: PrismaService) {}
 
   async createChart(dto: createChartDto) {
-    const chart = await this.prisma.chart.create({
-      data: {
-        chart_page: dto.name,
-      },
-    });
+    try {
+      const chart = await this.prisma.chart.create({
+        data: {
+          chart_page: dto.name,
+        },
+      });
 
-    return chart;
+      return chart;
+    } catch (error) {
+      if (error.code === 'P2002') {
+        throw new BadRequestException('Chart name is already taken!');
+      }
+      throw error;
+    }
   }
 
   async getChart(chartName: string) {
@@ -25,13 +36,13 @@ export class ChartService {
       include: {
         categories: {
           orderBy: {
-            order: "desc"
+            order: 'desc',
           },
           select: {
-            category_id: true
-          }
-        }
-      }
+            category_id: true,
+          },
+        },
+      },
     });
 
     if (!chart) {
@@ -44,154 +55,158 @@ export class ChartService {
   async updateChart(chartName: string, dto: updateChartDto) {
     const updatedChart = await this.prisma.chart.update({
       where: {
-        chart_page: chartName
+        chart_page: chartName,
       },
       data: {
-        chart_page: dto.name
+        chart_page: dto.name,
       },
       include: {
         categories: {
           orderBy: {
-            order: "desc"
+            order: 'desc',
           },
           select: {
-            category_id: true
-          }
-        }
-      }
-    })
+            category_id: true,
+          },
+        },
+      },
+    });
 
-    if (!updatedChart) throw new BadRequestException()
+    if (!updatedChart) throw new BadRequestException();
 
-    return updatedChart
+    return updatedChart;
   }
 
   async addCategoryToChart(chartName: string, categoryId: number) {
-
     const chart = await this.prisma.chart.findUnique({
       where: {
-        chart_page: chartName
+        chart_page: chartName,
       },
       include: {
-        categories: true
-      }
-    })
+        categories: true,
+      },
+    });
 
     const category = await this.prisma.category.findUnique({
       where: {
-        id: categoryId
-      }
-    })
+        id: categoryId,
+      },
+    });
 
-    if (!category) throw new NotFoundException()
+    if (!category) throw new NotFoundException();
 
     let isInChart = false;
     chart.categories.map((category) =>
-    category.category_id === categoryId
+      category.category_id === categoryId
         ? (isInChart = true)
         : (isInChart = false),
     );
 
     if (isInChart) throw new BadRequestException();
 
-
     const updatedChart = await this.prisma.chart.update({
       where: {
-        chart_page: chartName
+        chart_page: chartName,
       },
       data: {
         categories: {
           create: {
             order: chart.categories.length + 1,
-            category_id: categoryId
-          }
-        }
+            category_id: categoryId,
+          },
+        },
       },
       include: {
         categories: {
           orderBy: {
-            order: "desc"
+            order: 'desc',
           },
           select: {
-            category_id: true
-          }
-        }
-      }
-    })
+            category_id: true,
+          },
+        },
+      },
+    });
 
-    return updatedChart
+    return updatedChart;
   }
 
   async addTrendPlaylistToChart(chartName: string, playlistId: number) {
     const playlist = await this.prisma.playlist.findUnique({
       where: {
-        id: playlistId
-      }
-    })
+        id: playlistId,
+      },
+    });
 
-    if (!playlist) throw new NotFoundException()
+    if (!playlist) throw new NotFoundException();
 
     return this.prisma.chart.update({
       where: {
-        chart_page: chartName
+        chart_page: chartName,
       },
       data: {
         trend_playlist: {
           connect: {
-            id: playlistId
-          }
-        }
-      }
-    })
+            id: playlistId,
+          },
+        },
+      },
+    });
   }
 
   async removeTrendPlaylistFromChart(chartName: string, playlistId: number) {
     return this.prisma.chart.update({
       where: {
-        chart_page: chartName
+        chart_page: chartName,
       },
       data: {
         trend_playlist: {
           disconnect: {
-            id: playlistId
-          }
-        }
-      }
-    })
+            id: playlistId,
+          },
+        },
+      },
+    });
   }
 
   async removeCategoryFromChart(chartName: string, categoryId: number) {
     const updatedChart = await this.prisma.chart.update({
       where: {
-        chart_page: chartName
+        chart_page: chartName,
       },
       data: {
         categories: {
           deleteMany: {
-            category_id: categoryId
-          }
-        }
+            category_id: categoryId,
+          },
+        },
       },
       include: {
         categories: {
           orderBy: {
-            order: "desc"
+            order: 'desc',
           },
           select: {
-            category_id: true
-          }
-        }
-      }
-    })
+            category_id: true,
+          },
+        },
+      },
+    });
 
-    return updatedChart
+    return updatedChart;
   }
 
-  async deleteChart(chartName: string){
-    return this.prisma.chart.delete({
-      where: {
-        chart_page: chartName
-      }
-    })
+  async deleteChart(chartName: string) {
+    try {
+      await this.prisma.chart.delete({
+        where: {
+          chart_page: chartName,
+        },
+      });
+
+      return { success: true };
+    } catch (error) {
+      throw new BadRequestException('No chart with such name found');
+    }
   }
 }
