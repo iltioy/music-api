@@ -6,7 +6,7 @@ import {
   HttpCode,
   Req,
 } from '@nestjs/common';
-import { AuthDto } from './dto';
+import { signInDto, signUpDto, verifyEmailDto } from './dto';
 import { AuthService } from './auth.service';
 import { Request } from 'express';
 
@@ -16,13 +16,13 @@ export class AuthController {
 
   @Post('signup')
   @HttpCode(HttpStatus.CREATED)
-  signup(@Body() dto: AuthDto) {
+  signup(@Body() dto: signUpDto) {
     return this.authService.signup(dto);
   }
 
   @Post('signin')
   @HttpCode(HttpStatus.OK)
-  signin(@Body() dto: AuthDto) {
+  signin(@Body() dto: signInDto) {
     return this.authService.signin(dto);
   }
 
@@ -31,5 +31,11 @@ export class AuthController {
   refreshTokens(@Req() request: Request) {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return this.authService.refreshTokens(type, token);
+  }
+
+  @HttpCode(HttpStatus.OK)
+  @Post('email/verify')
+  verifyEmail(@Body() dto: verifyEmailDto) {
+    return this.authService.sendVerificationCode(dto);
   }
 }

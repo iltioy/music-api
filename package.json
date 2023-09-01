@@ -46,6 +46,7 @@
     "nodemailer": "^6.9.4",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.2.0",
+    "uid": "^2.0.2",
     "uuid": "^9.0.0"
   },
   "devDependencies": {

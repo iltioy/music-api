@@ -3,7 +3,6 @@ import { Test } from '@nestjs/testing';
 import { AppModule } from 'src/app.module';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as pactum from 'pactum';
-import { AuthDto } from 'src/auth/dto';
 import * as path from 'path';
 import { Prisma, User } from '@prisma/client';
 import * as argon from 'argon2';
@@ -12,6 +11,7 @@ import { createPlaylistDto } from 'src/playlists/dto';
 import { createCategoryDto, updateCategoryDto } from 'src/categories/dto';
 import { createChartDto } from 'src/chart/dto';
 import { updateChartDto } from 'src/chart/dto/update-chart.dto';
+import { signInDto, signUpDto } from 'src/auth/dto';
 
 describe('App e2e', () => {
   let app: INestApplication;
@@ -66,15 +66,43 @@ describe('App e2e', () => {
   });
 
   describe('Auth', () => {
-    const dto: AuthDto = {
-      email: 'tema.illar@mail.ru',
+    const dto: signInDto = {
+      email: 'tema.illarrrrrrrrrrrrr@mail.ru',
       password: 'lalalallala',
     };
 
-    const dto2: AuthDto = {
-      email: 'tema.illar2@mail.ru',
+    const dto2: signInDto = {
+      email: 'tema.illar2rrrrrrrrrrrrrrr@mail.ru',
       password: 'adsaasdasdd',
     };
+
+    let code1: string, code2: string;
+
+    beforeAll(async () => {
+      await pactum.spec().post('/auth/email/verify').withBody({
+        email: dto.email,
+        test: true,
+      });
+
+      await pactum.spec().post('/auth/email/verify').withBody({
+        email: dto2.email,
+        test: true,
+      });
+
+      const emailCodes1 = await prisma.verificationCodeToEmail.findMany({
+        where: {
+          email: dto.email,
+        },
+      });
+      const emailCodes2 = await prisma.verificationCodeToEmail.findMany({
+        where: {
+          email: dto2.email,
+        },
+      });
+
+      code1 = emailCodes1[0].verification_code;
+      code2 = emailCodes2[0].verification_code;
+    });
 
     describe('Sign up', () => {
       it('Should fail if email is not provided', () => {
@@ -105,7 +133,11 @@ describe('App e2e', () => {
         return pactum
           .spec()
           .post('/auth/signup')
-          .withBody(dto)
+          .withBody({
+            email: dto.email,
+            password: dto.password,
+            emailVerificationCode: code1,
+          })
           .expectStatus(201)
           .stores('accToken2', 'access_token');
       });
@@ -114,7 +146,11 @@ describe('App e2e', () => {
         return pactum
           .spec()
           .post('/auth/signup')
-          .withBody(dto)
+          .withBody({
+            email: dto.email,
+            password: dto.password,
+            emailVerificationCode: code2,
+          })
           .expectStatus(403);
       });
 
@@ -122,7 +158,11 @@ describe('App e2e', () => {
         return pactum
           .spec()
           .post('/auth/signup')
-          .withBody(dto2)
+          .withBody({
+            email: dto2.email,
+            password: dto2.password,
+            emailVerificationCode: code2,
+          })
           .expectStatus(201)
           .expectBodyContains('access_token')
           .expectBodyContains('refresh_token');

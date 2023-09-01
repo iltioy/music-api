@@ -28,6 +28,13 @@ model Image {
   @@map("images")
 }
 
+model verificationCodeToEmail {
+  id Int @id @default(autoincrement())
+
+  verification_code String
+  email String
+}
+
 model User {
   id Int @id @default(autoincrement())
 

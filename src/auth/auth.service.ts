@@ -7,11 +7,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { UsersService } from 'src/users/users.service';
-import { AuthDto } from './dto';
+import { signInDto, signUpDto, verifyEmailDto } from './dto';
 import * as argon from 'argon2';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { createUserDto } from 'src/users/dto';
+import { MailerService } from '@nestjs-modules/mailer';
+import { uid } from 'uid';
 
 @Injectable()
 export class AuthService {
@@ -19,12 +21,41 @@ export class AuthService {
     private usersService: UsersService,
     private prisma: PrismaService,
     private jwt: JwtService,
+    private mailService: MailerService,
   ) {}
 
-  async signup(dto: AuthDto) {
+  async signup(dto: signUpDto) {
     const hash = await argon.hash(dto.password);
 
     try {
+      const isEmailAvaible = await this.checkEmailAvailability(dto.email);
+      if (!isEmailAvaible) {
+        throw new ForbiddenException('Credentials are already taken!');
+      }
+
+      const codes = await this.prisma.verificationCodeToEmail.findMany({
+        where: {
+          email: dto.email,
+        },
+      });
+
+      let isVerified = false;
+      codes.map((code) => {
+        if (code.verification_code === dto.emailVerificationCode) {
+          isVerified = true;
+        }
+      });
+
+      if (!isVerified) {
+        throw new UnauthorizedException('Verification code is invalid!');
+      }
+
+      await this.prisma.verificationCodeToEmail.deleteMany({
+        where: {
+          email: dto.email,
+        },
+      });
+
       const createUserDto: createUserDto = {
         email: dto.email,
         hash,
@@ -41,18 +72,11 @@ export class AuthService {
 
       return tokens;
     } catch (error) {
-      if (error.code === 'P2002') {
-        throw new ForbiddenException('Credentials are already taken');
-      }
-      console.log(error);
-
-      throw new BadRequestException(
-        'An error occured while processing your request',
-      );
+      throw error;
     }
   }
 
-  async signin(dto: AuthDto) {
+  async signin(dto: signInDto) {
     try {
       const user = await this.prisma.user.findUnique({
         where: {
@@ -153,5 +177,56 @@ export class AuthService {
       access_token,
       refresh_token,
     };
+  }
+
+  async sendVerificationCode(dto: verifyEmailDto) {
+    try {
+      const isEmailAvaible = await this.checkEmailAvailability(dto.email);
+      if (!isEmailAvaible) {
+        throw new ForbiddenException('Credentials are already taken!');
+      }
+
+      const code = uid(6);
+
+      await this.prisma.verificationCodeToEmail.deleteMany({
+        where: {
+          email: dto.email,
+        },
+      });
+
+      const virifyEmailRecord =
+        await this.prisma.verificationCodeToEmail.create({
+          data: {
+            email: dto.email,
+            verification_code: code,
+          },
+        });
+
+      if (!dto.test) {
+        await this.mailService.sendMail({
+          from: 'tema.illar@outlook.com',
+          to: dto.email,
+          subject: 'Verification code',
+          text: `Your verification code: ${virifyEmailRecord.verification_code}`,
+        });
+      }
+
+      return { success: true };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async checkEmailAvailability(email: string) {
+    const existingUser = await this.prisma.user.findUnique({
+      where: {
+        email,
+      },
+    });
+
+    if (existingUser) {
+      return false;
+    }
+    return true;
   }
 }
