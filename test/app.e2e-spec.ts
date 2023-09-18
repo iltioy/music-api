@@ -139,7 +139,8 @@ describe('App e2e', () => {
             emailVerificationCode: code1,
           })
           .expectStatus(201)
-          .stores('accToken2', 'access_token');
+          .stores('accToken2', 'access_token')
+          .inspect();
       });
 
       it('Should fail for same credentials', () => {
@@ -798,7 +799,6 @@ describe('App e2e', () => {
           .patch('/users/playlists/add/$S{playlistId}')
           .withBearerToken('$S{accToken2}')
           .expectStatus(200)
-          .inspect()
           .expectJsonLength('added_playlists', 2);
       });
 
@@ -825,7 +825,6 @@ describe('App e2e', () => {
           .delete('/users/playlists/remove/$S{playlistId}')
           .withBearerToken('$S{accToken2}')
           .expectStatus(200)
-          .inspect()
           .expectJsonLength('added_playlists', 1);
       });
     });
@@ -875,8 +874,7 @@ describe('App e2e', () => {
           .spec()
           .post('/categories/create')
           .withBody(createCategoryDto)
-          .expectStatus(401)
-          .inspect();
+          .expectStatus(401);
       });
 
       it('Should fail without body', () => {
@@ -884,8 +882,7 @@ describe('App e2e', () => {
           .spec()
           .post('/categories/create')
           .withBearerToken('$S{adminAccToken}')
-          .expectStatus(400)
-          .inspect();
+          .expectStatus(400);
       });
 
       it('Should create a category', () => {

@@ -10,6 +10,7 @@ const USER_QUERY = {
     username: true,
     email: true,
     image: IMAGE_QUERY,
+    role: true,
   },
 };
 
@@ -34,6 +35,7 @@ const ORDERED_PLAYLISY_QUERY_SELECT = {
   playlist: {
     include: {
       image: IMAGE_QUERY,
+      owner: USER_QUERY,
     },
   },
 };
