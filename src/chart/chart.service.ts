@@ -36,7 +36,7 @@ export class ChartService {
       include: {
         categories: {
           orderBy: {
-            order: 'desc',
+            order: 'asc',
           },
           select: {
             category_id: true,
@@ -63,7 +63,7 @@ export class ChartService {
       include: {
         categories: {
           orderBy: {
-            order: 'desc',
+            order: 'asc',
           },
           select: {
             category_id: true,
@@ -119,7 +119,7 @@ export class ChartService {
       include: {
         categories: {
           orderBy: {
-            order: 'desc',
+            order: 'asc',
           },
           select: {
             category_id: true,
@@ -184,7 +184,7 @@ export class ChartService {
       include: {
         categories: {
           orderBy: {
-            order: 'desc',
+            order: 'asc',
           },
           select: {
             category_id: true,

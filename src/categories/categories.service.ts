@@ -20,7 +20,7 @@ export class CategoriesService {
       include: {
         playlists: {
           orderBy: {
-            order: 'desc',
+            order: 'asc',
           },
           select: ORDERED_PLAYLISY_QUERY_SELECT,
         },
@@ -64,7 +64,7 @@ export class CategoriesService {
       include: {
         playlists: {
           orderBy: {
-            order: 'desc',
+            order: 'asc',
           },
           select: ORDERED_PLAYLISY_QUERY_SELECT,
         },
@@ -107,7 +107,7 @@ export class CategoriesService {
       include: {
         playlists: {
           orderBy: {
-            order: 'desc',
+            order: 'asc',
           },
           select: ORDERED_PLAYLISY_QUERY_SELECT,
         },
@@ -140,7 +140,7 @@ export class CategoriesService {
       include: {
         playlists: {
           orderBy: {
-            order: 'desc',
+            order: 'asc',
           },
           select: ORDERED_PLAYLISY_QUERY_SELECT,
         },

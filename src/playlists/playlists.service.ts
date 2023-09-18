@@ -33,7 +33,7 @@ export class PlaylistsService {
         image: IMAGE_QUERY,
         songs: {
           orderBy: {
-            order: 'desc',
+            order: 'asc',
           },
           select: ORDERED_SONG_QUERY_SELECT,
         },
@@ -47,10 +47,14 @@ export class PlaylistsService {
     return playlist;
   }
 
-  async createPlaylist(userId: number, dto: createPlaylistDto) {
+  async createPlaylist(
+    userId: number,
+    dto: createPlaylistDto,
+    isFavorite?: boolean,
+  ) {
     let playlistImage = this.defaultImage;
 
-    if (dto.image_key) {
+    if (dto.image_key || dto.image_url) {
       playlistImage = {
         image_key: dto.image_key,
         image_url: dto.image_url,
@@ -64,6 +68,7 @@ export class PlaylistsService {
           create: playlistImage,
         },
         owner_id: userId,
+        is_favorite: isFavorite,
       },
       include: {
         owner: USER_QUERY,
@@ -112,7 +117,7 @@ export class PlaylistsService {
         image: IMAGE_QUERY,
         songs: {
           orderBy: {
-            order: 'desc',
+            order: 'asc',
           },
           select: ORDERED_SONG_QUERY_SELECT,
         },
@@ -158,7 +163,7 @@ export class PlaylistsService {
       include: {
         songs: {
           orderBy: {
-            order: 'desc',
+            order: 'asc',
           },
           select: ORDERED_SONG_QUERY_SELECT,
         },
@@ -191,7 +196,7 @@ export class PlaylistsService {
       include: {
         songs: {
           orderBy: {
-            order: 'desc',
+            order: 'asc',
           },
           select: ORDERED_SONG_QUERY_SELECT,
         },

@@ -25,7 +25,7 @@ const ORDERED_SONG_QUERY_SELECT = {
 
 const ORDERED_SONG_QUERY = {
   orderBy: {
-    order: 'desc',
+    order: 'asc',
   },
   select: ORDERED_SONG_QUERY_SELECT,
 };

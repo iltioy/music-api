@@ -70,6 +70,7 @@ export class UsersService {
           image_key: null,
           image_url: FAVORITE_PLAYLIST_ICON_URL,
         },
+        true,
       );
 
       const updatedUser = await this.prisma.user.update({

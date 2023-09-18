@@ -48,7 +48,8 @@ model User {
 
   restore_password_link_id String?
   
-  added_playlists OrderedPlaylist[]
+  added_playlists OrderedPlaylist[] @relation("added_playlists")
+  liked_playlists OrderedPlaylist[] @relation("liked_playlists")
 
   songs     Song[] 
   owned_playlists Playlist[] @relation("owned_playlists")
@@ -137,8 +138,8 @@ model OrderedPlaylist {
   category_id Int?
   category Category? @relation(fields: [category_id], references: [id], onDelete: SetNull)
 
-  user_id Int?
-  user User[]
+  addded_users User[] @relation("added_playlists")
+  liked_users User[] @relation("liked_playlists")
 
   order Int 
 
