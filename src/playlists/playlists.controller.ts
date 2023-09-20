@@ -30,9 +30,10 @@ export class PlaylistsController {
   }
 
   @SkipAuth()
-  @Get('/:username/liked')
-  getLikedPlaylistsByUsername(@Param('username') username: string) {}
-
+  @Get('user/:username')
+  getPlaylistsByUsername(@Param('username') username: string) {
+    return this.playlistService.getPlaylistsByUsername(username);
+  }
   @HttpCode(HttpStatus.CREATED)
   @Post('create')
   createPlaylist(

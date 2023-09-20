@@ -168,7 +168,7 @@ export class UsersService {
         to: dto.email,
         from: 'tema.illar@outlook.com',
         subject: 'Password Recovery',
-        html: `Your password recovery link: <a>${PASSWORD_RECOVERY_LINK}/${link_id}</a>`,
+        html: `Your password recovery link: <a href="${PASSWORD_RECOVERY_LINK}/${link_id}">${PASSWORD_RECOVERY_LINK}/${link_id}</a>`,
       });
 
       setTimeout(async () => {

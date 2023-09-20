@@ -51,7 +51,7 @@ export class PlaylistsService {
     return playlist;
   }
 
-  async getLikedPlaylistsByUsername(username: string) {
+  async getPlaylistsByUsername(username: string) {
     const user = await this.prisma.user.findUnique({
       where: {
         username: username,
@@ -73,8 +73,27 @@ export class PlaylistsService {
             },
           },
         },
+        added_playlists: {
+          include: {
+            playlist: {
+              include: {
+                owner: USER_QUERY,
+                image: IMAGE_QUERY,
+                songs: {
+                  orderBy: {
+                    order: 'desc',
+                  },
+                  select: ORDERED_SONG_QUERY_SELECT,
+                },
+              },
+            },
+          },
+        },
       },
     });
+
+    const { liked_playlists, added_playlists } = user;
+    return { liked_playlists, added_playlists };
   }
 
   async createPlaylist(
