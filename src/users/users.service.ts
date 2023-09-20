@@ -168,8 +168,19 @@ export class UsersService {
         to: dto.email,
         from: 'tema.illar@outlook.com',
         subject: 'Password Recovery',
-        text: `Your password recovery link: ${PASSWORD_RECOVERY_LINK}/${link_id}`,
+        html: `Your password recovery link: <a>${PASSWORD_RECOVERY_LINK}/${link_id}</a>`,
       });
+
+      setTimeout(async () => {
+        await this.prisma.user.update({
+          where: {
+            email: dto.email,
+          },
+          data: {
+            restore_password_link_id: null,
+          },
+        });
+      }, 1000 * 60);
 
       return { success: true };
     } catch (error) {
@@ -238,21 +249,19 @@ export class UsersService {
 
   async restorePassword(recovery_link_id: string, dto: restorePasswordDto) {
     try {
-      const user = await this.prisma.user.findUnique({
+      const user = await this.prisma.user.findFirst({
         where: {
-          email: dto.email,
+          restore_password_link_id: recovery_link_id,
         },
       });
 
-      if (!user) throw new NotFoundException();
-
-      if (user.restore_password_link_id !== recovery_link_id)
+      if (!user || !user.restore_password_link_id)
         throw new ForbiddenException();
 
       const hash = await argon.hash(dto.password);
       await this.prisma.user.update({
         where: {
-          email: dto.email,
+          email: user.email,
         },
         data: {
           restore_password_link_id: null,

@@ -130,9 +130,12 @@ export class AuthService {
       if (!doMatch) throw new UnauthorizedException();
 
       const tokens = await this.signTokens(userId, email, username, role);
-      await this.updateRefreshToken(userId, tokens.refresh_token);
+      // await this.updateRefreshToken(userId, tokens.refresh_token);
 
-      return tokens;
+      return {
+        access_token: tokens.access_token,
+        refresh_token: refreshToken,
+      };
     } catch (error) {
       throw new UnauthorizedException();
     }

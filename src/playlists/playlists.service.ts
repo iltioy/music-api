@@ -33,7 +33,7 @@ export class PlaylistsService {
         image: IMAGE_QUERY,
         songs: {
           orderBy: {
-            order: 'asc',
+            order: 'desc',
           },
           select: ORDERED_SONG_QUERY_SELECT,
         },
@@ -117,7 +117,7 @@ export class PlaylistsService {
         image: IMAGE_QUERY,
         songs: {
           orderBy: {
-            order: 'asc',
+            order: 'desc',
           },
           select: ORDERED_SONG_QUERY_SELECT,
         },
@@ -163,7 +163,7 @@ export class PlaylistsService {
       include: {
         songs: {
           orderBy: {
-            order: 'asc',
+            order: 'desc',
           },
           select: ORDERED_SONG_QUERY_SELECT,
         },
@@ -196,7 +196,7 @@ export class PlaylistsService {
       include: {
         songs: {
           orderBy: {
-            order: 'asc',
+            order: 'desc',
           },
           select: ORDERED_SONG_QUERY_SELECT,
         },
