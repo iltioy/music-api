@@ -29,6 +29,10 @@ export class PlaylistsController {
     return this.playlistService.getPlaylist(playlistId);
   }
 
+  @SkipAuth()
+  @Get('/:username/liked')
+  getLikedPlaylistsByUsername(@Param('username') username: string) {}
+
   @HttpCode(HttpStatus.CREATED)
   @Post('create')
   createPlaylist(
@@ -45,6 +49,14 @@ export class PlaylistsController {
     @Param('songId', ParseIntPipe) songId: number,
   ) {
     return this.playlistService.addSongToPlaylist(userId, playlistId, songId);
+  }
+
+  @Patch('/favorite/toggle/:playlistId')
+  toggleAddPlaylistToFavorites(
+    @GetUser('id') userId: number,
+    @Param('playlistId', ParseIntPipe) playlistId: number,
+  ) {
+    return this.playlistService.handleTogglePlaylistLike(userId, playlistId);
   }
 
   @Delete(':playlistId/song/remove/:songId')

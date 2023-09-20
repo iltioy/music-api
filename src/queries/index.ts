@@ -49,6 +49,9 @@ const SELECT_USER_QUERY = {
   added_playlists: {
     select: ORDERED_PLAYLISY_QUERY_SELECT,
   },
+  liked_playlists: {
+    select: ORDERED_PLAYLISY_QUERY_SELECT,
+  },
   categories: {
     select: {
       playlists: {

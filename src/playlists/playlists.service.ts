@@ -7,10 +7,14 @@ import {
 import { PrismaService } from 'src/prisma/prisma.service';
 import { createPlaylistDto } from './dto';
 import { updatePlaylistDto } from './dto';
-import { DEFAULT_PLAYLISY_IMAGE_URL } from 'src/constants';
+import {
+  DEFAULT_PLAYLISY_IMAGE_URL,
+  FAVORITE_PLAYLIST_ICON_URL,
+} from 'src/constants';
 import {
   IMAGE_QUERY,
   ORDERED_SONG_QUERY_SELECT,
+  SELECT_USER_QUERY,
   USER_QUERY,
 } from 'src/queries';
 
@@ -45,6 +49,32 @@ export class PlaylistsService {
     }
 
     return playlist;
+  }
+
+  async getLikedPlaylistsByUsername(username: string) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        username: username,
+      },
+      include: {
+        liked_playlists: {
+          include: {
+            playlist: {
+              include: {
+                owner: USER_QUERY,
+                image: IMAGE_QUERY,
+                songs: {
+                  orderBy: {
+                    order: 'desc',
+                  },
+                  select: ORDERED_SONG_QUERY_SELECT,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
   }
 
   async createPlaylist(
@@ -171,6 +201,121 @@ export class PlaylistsService {
     });
 
     return updatedPlatlist;
+  }
+
+  async handleTogglePlaylistLike(userId: number, playlistId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      include: {
+        liked_playlists: {
+          include: {
+            playlist: true,
+          },
+        },
+      },
+    });
+
+    if (!user) throw new BadRequestException();
+
+    let isPlaylistAlreadyLiked = false;
+    let maxOrder = 0;
+
+    user.liked_playlists.map((el) => {
+      maxOrder = Math.max(maxOrder, el.order);
+      if (el.playlist.id === playlistId) {
+        isPlaylistAlreadyLiked = true;
+      }
+    });
+
+    let updatedUser;
+    if (!isPlaylistAlreadyLiked) {
+      updatedUser = await this.prisma.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          liked_playlists: {
+            create: {
+              order: maxOrder + 1,
+              playlist_id: playlistId,
+            },
+          },
+        },
+        select: SELECT_USER_QUERY,
+      });
+    } else {
+      updatedUser = await this.prisma.user.update({
+        where: {
+          id: userId,
+        },
+        data: {
+          liked_playlists: {
+            deleteMany: {
+              playlist_id: playlistId,
+            },
+          },
+        },
+        select: SELECT_USER_QUERY,
+      });
+    }
+
+    return updatedUser;
+  }
+
+  async createFavoritePlaylist(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      include: {
+        added_playlists: {
+          include: {
+            playlist: {
+              include: {
+                songs: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    let isFavoritePlaylistExists = false;
+
+    user.added_playlists.map((el) => {
+      if (el.playlist.is_favorite) {
+        isFavoritePlaylistExists = true;
+      }
+    });
+
+    if (isFavoritePlaylistExists) return;
+    const iLikePlaylist = await this.createPlaylist(
+      user.id,
+      {
+        name: 'Мне нравится',
+        image_key: null,
+        image_url: FAVORITE_PLAYLIST_ICON_URL,
+      },
+      true,
+    );
+
+    await this.prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        added_playlists: {
+          create: {
+            order: 1,
+            playlist_id: iLikePlaylist.id,
+          },
+        },
+      },
+    });
+
+    return iLikePlaylist;
   }
 
   async removeSongFromPlaylist(

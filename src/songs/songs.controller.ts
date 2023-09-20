@@ -41,6 +41,15 @@ export class SongsController {
   }
 
   @UseGuards(AuthGuard)
+  @Patch('/favorite/add/:songId')
+  addSongToFavoritePlaylist(
+    @GetUser('id') userId: number,
+    @Param('songId', ParseIntPipe) songId: number,
+  ) {
+    return this.songsService.addSongToFavoritePlaylist(userId, songId);
+  }
+
+  @UseGuards(AuthGuard)
   @Patch('update/:songId')
   //   @HttpCode(HttpStatus.OK)
   updateSong(

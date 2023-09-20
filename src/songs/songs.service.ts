@@ -9,6 +9,8 @@ import { createSongDto } from './dto';
 import { updateSongDto } from './dto/update-song.dto';
 import { DEFAULT_MUSIC_IMAGE_URL } from 'src/constants';
 import { IMAGE_QUERY, USER_QUERY } from 'src/queries';
+import { Playlist } from '@prisma/client';
+import { PlaylistsService } from 'src/playlists/playlists.service';
 
 @Injectable()
 export class SongsService {
@@ -17,7 +19,10 @@ export class SongsService {
     image_url: DEFAULT_MUSIC_IMAGE_URL,
   };
 
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private playlistsService: PlaylistsService,
+  ) {}
 
   async getSong(songId: number) {
     const song = await this.prisma.song.findUnique({
@@ -136,6 +141,73 @@ export class SongsService {
     }
 
     return updatedSong;
+  }
+
+  async addSongToFavoritePlaylist(userId: number, songId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      include: {
+        added_playlists: {
+          include: {
+            playlist: {
+              include: {
+                songs: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const existingPlaylist = await this.prisma.playlist.findFirst({
+      where: {
+        owner_id: userId,
+        is_favorite: true,
+      },
+      include: {
+        songs: true,
+      },
+    });
+
+    if (!user) throw new NotFoundException();
+
+    if (!existingPlaylist) {
+      let playlist = await this.playlistsService.createFavoritePlaylist(userId);
+
+      const updatedPlaylist = await this.playlistsService.addSongToPlaylist(
+        userId,
+        playlist.id,
+        songId,
+      );
+
+      return updatedPlaylist;
+    }
+
+    let isSongInFavoritePlaylist = false;
+    existingPlaylist.songs.map((song) => {
+      if (song.song_id === songId) {
+        isSongInFavoritePlaylist = true;
+      }
+    });
+
+    let updatedPlaylist;
+    if (!isSongInFavoritePlaylist) {
+      updatedPlaylist = await this.playlistsService.addSongToPlaylist(
+        userId,
+        existingPlaylist.id,
+        songId,
+      );
+    } else {
+      updatedPlaylist = await this.playlistsService.removeSongFromPlaylist(
+        userId,
+        existingPlaylist.id,
+        songId,
+      );
+    }
+
+    return updatedPlaylist;
   }
 
   async deleteSong(userId: number, songId: number) {
