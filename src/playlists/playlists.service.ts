@@ -110,9 +110,22 @@ export class PlaylistsService {
       };
     }
 
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+      include: {
+        added_playlists: {
+          include: {
+            playlist: true,
+          },
+        },
+      },
+    });
+
     const playlist = await this.prisma.playlist.create({
       data: {
-        name: dto.name,
+        name: `Плейлист #${user.added_playlists.length + 1}`,
         image: {
           create: playlistImage,
         },
@@ -122,6 +135,25 @@ export class PlaylistsService {
       include: {
         owner: USER_QUERY,
         image: IMAGE_QUERY,
+      },
+    });
+
+    let maxOrder = 0;
+    user.added_playlists.forEach((el) => {
+      maxOrder = Math.max(maxOrder, el.order);
+    });
+
+    await this.prisma.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        added_playlists: {
+          create: {
+            order: maxOrder + 1,
+            playlist_id: playlist.id,
+          },
+        },
       },
     });
 
@@ -241,7 +273,7 @@ export class PlaylistsService {
     let isPlaylistAlreadyLiked = false;
     let maxOrder = 0;
 
-    user.liked_playlists.map((el) => {
+    user.liked_playlists.forEach((el) => {
       maxOrder = Math.max(maxOrder, el.order);
       if (el.playlist.id === playlistId) {
         isPlaylistAlreadyLiked = true;
