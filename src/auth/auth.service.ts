@@ -111,6 +111,9 @@ export class AuthService {
 
   async refreshTokens(type: string, refreshToken: string) {
     try {
+      if (!refreshToken || refreshToken === 'null')
+        throw new BadRequestException('Token required!');
+
       const {
         id: userId,
         email,
@@ -120,24 +123,41 @@ export class AuthService {
         secret: process.env.JWT_SECRET_REFRESH,
       });
 
-      const user = await this.prisma.user.findUnique({
-        where: {
-          id: userId,
-        },
-      });
+      // const user = await this.prisma.user.findUnique({
+      //   where: {
+      //     id: userId,
+      //   },
+      // });
 
-      const doMatch = await argon.verify(user.refresh_token, refreshToken);
-      if (!doMatch) throw new UnauthorizedException();
+      const blacklistedToken =
+        await this.prisma.blacklisted_refresh_tokens.findFirst({
+          where: {
+            token: refreshToken,
+          },
+        });
+
+      if (blacklistedToken) throw new UnauthorizedException('Token expired!');
+
+      // const doMatch = await argon.verify(user.refresh_token, refreshToken);
+      // if (!doMatch) throw new UnauthorizedException();
 
       const tokens = await this.signTokens(userId, email, username, role);
+      setTimeout(() => {
+        this.blacklistRefreshToken(refreshToken);
+      }, 1000 * 15);
       // await this.updateRefreshToken(userId, tokens.refresh_token);
+
+      // return {
+      //   access_token: tokens.access_token,
+      //   refresh_token: refreshToken,
+      // };
 
       return {
         access_token: tokens.access_token,
-        refresh_token: refreshToken,
+        refresh_token: tokens.refresh_token,
       };
     } catch (error) {
-      throw new UnauthorizedException();
+      throw error;
     }
   }
 
@@ -152,6 +172,18 @@ export class AuthService {
         refresh_token: hashedRefreshToken,
       },
     });
+  }
+
+  async blacklistRefreshToken(token: string) {
+    try {
+      await this.prisma.blacklisted_refresh_tokens.create({
+        data: {
+          token,
+        },
+      });
+    } catch (error) {
+      console.log(error);
+    }
   }
 
   async signTokens(

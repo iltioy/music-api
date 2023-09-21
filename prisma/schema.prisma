@@ -60,6 +60,11 @@ model User {
   @@map("users")
 }
 
+model blacklisted_refresh_tokens {
+  id Int @id @default(autoincrement())
+  token String
+}
+
 model Playlist {
   id Int @id @default(autoincrement())
 
