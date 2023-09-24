@@ -62,6 +62,42 @@ const SELECT_USER_QUERY = {
   },
 };
 
+const SELECT_ME_USER_QUERY = {
+  id: true,
+  role: true,
+  username: true,
+  email: true,
+  image: IMAGE_QUERY,
+  added_playlists: {
+    select: {
+      order: true,
+      playlist: {
+        include: {
+          image: IMAGE_QUERY,
+          owner: USER_QUERY,
+          songs: {
+            orderBy: {
+              order: 'desc',
+            },
+            select: ORDERED_SONG_QUERY_SELECT,
+          },
+        },
+      },
+    },
+  },
+  liked_playlists: {
+    select: ORDERED_PLAYLISY_QUERY_SELECT,
+  },
+  categories: {
+    select: {
+      playlists: {
+        select: ORDERED_PLAYLISY_QUERY_SELECT,
+      },
+      name: true,
+    },
+  },
+};
+
 export {
   IMAGE_QUERY,
   USER_QUERY,
@@ -69,4 +105,5 @@ export {
   ORDERED_SONG_QUERY_SELECT,
   ORDERED_SONG_QUERY,
   ORDERED_PLAYLISY_QUERY_SELECT,
+  SELECT_ME_USER_QUERY,
 };

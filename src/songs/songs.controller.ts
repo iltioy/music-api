@@ -50,6 +50,15 @@ export class SongsController {
   }
 
   @UseGuards(AuthGuard)
+  @Patch('/favorite/toggle/:songId')
+  toggleAddSongToFavorites(
+    @GetUser('id') userId: number,
+    @Param('songId', ParseIntPipe) songId: number,
+  ) {
+    return this.songsService.handleToggleSongLike(userId, songId);
+  }
+
+  @UseGuards(AuthGuard)
   @Patch('update/:songId')
   //   @HttpCode(HttpStatus.OK)
   updateSong(

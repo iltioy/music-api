@@ -135,6 +135,11 @@ export class PlaylistsService {
       include: {
         owner: USER_QUERY,
         image: IMAGE_QUERY,
+        songs: {
+          include: {
+            song: true,
+          },
+        },
       },
     });
 
@@ -215,9 +220,11 @@ export class PlaylistsService {
     this.checkAccess(userId, playlist.owner_id);
 
     let isInPlaylist = false;
-    playlist.songs.map((song) =>
-      song.song_id === songId ? (isInPlaylist = true) : (isInPlaylist = false),
-    );
+    let maxOrder = 0;
+    playlist.songs.forEach((song) => {
+      song.song_id === songId ? (isInPlaylist = true) : (isInPlaylist = false);
+      maxOrder = Math.max(maxOrder, song.order);
+    });
 
     if (isInPlaylist) throw new BadRequestException();
 
@@ -236,7 +243,7 @@ export class PlaylistsService {
       data: {
         songs: {
           create: {
-            order: playlist.songs.length + 1,
+            order: maxOrder + 1,
             song_id: songId,
           },
         },

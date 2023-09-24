@@ -210,6 +210,79 @@ export class SongsService {
     return updatedPlaylist;
   }
 
+  async handleToggleSongLike(userId: number, songId: number) {
+    const song = await this.prisma.song.findUnique({
+      where: {
+        id: songId,
+      },
+    });
+
+    if (!song) {
+      throw new NotFoundException('Song was not found!');
+    }
+
+    let isSongAlreadyLiked = false;
+    let maxOrder = 0;
+
+    let favoritePlaylist = await this.prisma.playlist.findFirst({
+      where: {
+        owner_id: userId,
+        is_favorite: true,
+      },
+      include: {
+        songs: {
+          include: {
+            song: true,
+          },
+        },
+      },
+    });
+
+    if (!favoritePlaylist) {
+      favoritePlaylist = await this.playlistsService.createFavoritePlaylist(
+        userId,
+      );
+    }
+
+    favoritePlaylist.songs.forEach((el) => {
+      maxOrder = Math.max(maxOrder, el.order);
+      if (el.song.id === songId) {
+        isSongAlreadyLiked = true;
+      }
+    });
+
+    if (!isSongAlreadyLiked) {
+      await this.prisma.playlist.update({
+        where: {
+          id: favoritePlaylist.id,
+        },
+        data: {
+          songs: {
+            create: {
+              order: maxOrder + 1,
+              song_id: songId,
+            },
+          },
+        },
+      });
+    } else {
+      await this.prisma.playlist.update({
+        where: {
+          id: favoritePlaylist.id,
+        },
+        data: {
+          songs: {
+            deleteMany: {
+              song_id: songId,
+            },
+          },
+        },
+      });
+    }
+
+    return { success: true };
+  }
+
   async deleteSong(userId: number, songId: number) {
     const song = await this.prisma.song.findUnique({
       where: {

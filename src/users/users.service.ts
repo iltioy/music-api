@@ -8,7 +8,10 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import {
   IMAGE_QUERY,
   ORDERED_PLAYLISY_QUERY_SELECT,
+  ORDERED_SONG_QUERY_SELECT,
+  SELECT_ME_USER_QUERY,
   SELECT_USER_QUERY,
+  USER_QUERY,
 } from 'src/queries';
 import { updateUserDto } from './dto/update-user.dto';
 import { createUserDto } from './dto';
@@ -99,7 +102,41 @@ export class UsersService {
       where: {
         username,
       },
-      select: SELECT_USER_QUERY,
+      select: {
+        id: true,
+        role: true,
+        username: true,
+        email: true,
+        image: IMAGE_QUERY,
+        added_playlists: {
+          select: {
+            order: true,
+            playlist: {
+              include: {
+                image: IMAGE_QUERY,
+                owner: USER_QUERY,
+                songs: {
+                  orderBy: {
+                    order: 'desc',
+                  },
+                  select: ORDERED_SONG_QUERY_SELECT,
+                },
+              },
+            },
+          },
+        },
+        liked_playlists: {
+          select: ORDERED_PLAYLISY_QUERY_SELECT,
+        },
+        categories: {
+          select: {
+            playlists: {
+              select: ORDERED_PLAYLISY_QUERY_SELECT,
+            },
+            name: true,
+          },
+        },
+      },
     });
 
     if (!user) {
