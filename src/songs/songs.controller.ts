@@ -10,6 +10,7 @@ import {
   Body,
   HttpCode,
   HttpStatus,
+  Query,
 } from '@nestjs/common';
 import { SongsService } from './songs.service';
 import { AuthGuard } from 'src/auth/guard';
@@ -21,16 +22,24 @@ import { updateSongDto } from './dto/update-song.dto';
 export class SongsController {
   constructor(private songsService: SongsService) {}
 
-  @Get(':songId')
-  @HttpCode(HttpStatus.OK)
-  getSong(@Param('songId', ParseIntPipe) songId: number) {
-    return this.songsService.getSong(songId);
-  }
-
   @Get('get/random')
   @HttpCode(HttpStatus.OK)
   getRandomSong() {
     return this.songsService.getRandomSong();
+  }
+
+  @Get('search')
+  searchForSong(
+    @Query('query') query: string,
+    @Query('page', ParseIntPipe) page: number,
+  ) {
+    return this.songsService.search(query, page);
+  }
+
+  @Get(':songId')
+  @HttpCode(HttpStatus.OK)
+  getSong(@Param('songId', ParseIntPipe) songId: number) {
+    return this.songsService.getSong(songId);
   }
 
   @UseGuards(AuthGuard)

@@ -310,4 +310,71 @@ export class SongsService {
 
     throw new ForbiddenException();
   }
+
+  async search(query: string, page: number) {
+    // const nameItemsPerPage = 20;
+    try {
+      const songsByName = await this.prisma.song.findMany({
+        where: {
+          name: {
+            contains: query,
+            mode: 'insensitive',
+          },
+        },
+        orderBy: {
+          name: 'desc',
+        },
+        include: {
+          image: IMAGE_QUERY,
+          owner: USER_QUERY,
+        },
+        // take: nameItemsPerPage,
+        // skip: (page - 1) * nameItemsPerPage
+      });
+
+      let songByNameIds: number[] = [];
+
+      songsByName.forEach((song) => {
+        songByNameIds.push(song.id);
+      });
+
+      // let authourItemsPerPage = 0
+      // if (songsByName.length < nameItemsPerPage) {
+      //   authourItemsPerPage = 20
+      // }
+
+      const songsByAuthor = await this.prisma.song.findMany({
+        where: {
+          author: {
+            contains: query,
+            mode: 'insensitive',
+          },
+          id: {
+            notIn: songByNameIds,
+          },
+        },
+        orderBy: {
+          author: 'desc',
+        },
+        include: {
+          image: IMAGE_QUERY,
+          owner: USER_QUERY,
+        },
+        // take: authourItemsPerPage,
+        // skip: (page - 1) * authourItemsPerPage
+      });
+
+      const itemsPerPage = 5;
+
+      let allFoundSongs = [...songsByName, ...songsByAuthor];
+      let paginatedSongs = allFoundSongs.slice(
+        (page - 1) * itemsPerPage,
+        page * itemsPerPage,
+      );
+
+      return paginatedSongs;
+    } catch (error) {
+      console.log(error);
+    }
+  }
 }
