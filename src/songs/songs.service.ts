@@ -61,7 +61,7 @@ export class SongsService {
   async createSong(userId: number, dto: createSongDto) {
     let songImage = this.defaultImage;
 
-    if (dto.image_key) {
+    if (dto.image_key || dto.image_url) {
       songImage = {
         image_key: dto.image_key,
         image_url: dto.image_url,
