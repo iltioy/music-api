@@ -11,6 +11,7 @@ import { DEFAULT_MUSIC_IMAGE_URL } from 'src/constants';
 import { IMAGE_QUERY, USER_QUERY } from 'src/queries';
 import { Playlist } from '@prisma/client';
 import { PlaylistsService } from 'src/playlists/playlists.service';
+import { getRadioSongDto } from './dto/get-radio-song.dto';
 
 @Injectable()
 export class SongsService {
@@ -56,6 +57,41 @@ export class SongsService {
     });
 
     return randomSong[0];
+  }
+
+  async getSongForRadio(dto: getRadioSongDto) {
+    const genre = dto.genres[Math.floor(Math.random() * dto.genres.length)];
+    const mood = dto.moods[Math.floor(Math.random() * dto.moods.length)];
+    const language =
+      dto.languages[Math.floor(Math.random() * dto.languages.length)];
+
+    let songs = await this.prisma.song.findMany({
+      where: {
+        genre,
+        mood,
+        language,
+      },
+      include: {
+        image: IMAGE_QUERY,
+        owner: USER_QUERY,
+      },
+    });
+
+    if (songs.length === 0) {
+      songs = await this.prisma.song.findMany({
+        where: {
+          language,
+          genre,
+        },
+        include: {
+          image: IMAGE_QUERY,
+          owner: USER_QUERY,
+        },
+      });
+    }
+
+    const song = songs[Math.floor(Math.random() * songs.length)];
+    return song;
   }
 
   async createSong(userId: number, dto: createSongDto) {

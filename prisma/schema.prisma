@@ -85,6 +85,24 @@ model Playlist {
   @@map("playlists")
 }
 
+enum Genre {
+  hipHop
+  pop
+  rap
+}
+
+enum Mood {
+  calm
+  cheerful
+  sad
+}
+
+enum Language {
+  russian
+  english
+  nowords
+}
+
 model Song {
   id Int @id @default(autoincrement())
 
@@ -92,6 +110,10 @@ model Song {
   url    String
   author String
   album  String?
+
+  genre Genre?
+  mood Mood?
+  language Language?
 
   image Image?
 

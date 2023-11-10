@@ -17,6 +17,7 @@ import { AuthGuard } from 'src/auth/guard';
 import { GetUser } from 'src/auth/decorator';
 import { createSongDto } from './dto';
 import { updateSongDto } from './dto/update-song.dto';
+import { getRadioSongDto } from './dto/get-radio-song.dto';
 
 @Controller('songs')
 export class SongsController {
@@ -26,6 +27,12 @@ export class SongsController {
   @HttpCode(HttpStatus.OK)
   getRandomSong() {
     return this.songsService.getRandomSong();
+  }
+
+  @Post('get/radio')
+  @HttpCode(HttpStatus.OK)
+  getRadioSong(@Body() dto: getRadioSongDto) {
+    return this.songsService.getSongForRadio(dto);
   }
 
   @Get('search')
