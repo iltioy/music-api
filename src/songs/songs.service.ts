@@ -91,6 +91,11 @@ export class SongsService {
     }
 
     const song = songs[Math.floor(Math.random() * songs.length)];
+
+    if (!song) {
+      return this.getRandomSong();
+    }
+    console.log(song, songs);
     return song;
   }
 
