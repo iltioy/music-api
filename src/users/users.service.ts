@@ -66,30 +66,16 @@ export class UsersService {
         select: SELECT_USER_QUERY,
       });
 
-      const iLikePlaylist = await this.playlistsService.createPlaylist(
-        user.id,
-        {
-          name: 'Мне нравится',
-          image_key: null,
-          image_url: FAVORITE_PLAYLIST_ICON_URL,
-        },
-        true,
-      );
+      this.playlistsService.createFavoritePlaylist(user.id);
 
-      const updatedUser = await this.prisma.user.update({
+      const updatedUser = await this.prisma.user.findUnique({
         where: {
           id: user.id,
         },
-        data: {
-          added_playlists: {
-            create: {
-              order: 1,
-              playlist_id: iLikePlaylist.id,
-            },
-          },
-        },
         select: SELECT_USER_QUERY,
       });
+
+      console.log(updatedUser);
 
       return updatedUser;
     } catch (error) {

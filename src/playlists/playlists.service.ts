@@ -92,6 +92,10 @@ export class PlaylistsService {
       },
     });
 
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
     const { liked_playlists, added_playlists } = user;
     return { liked_playlists, added_playlists };
   }
@@ -349,15 +353,29 @@ export class PlaylistsService {
     });
 
     if (isFavoritePlaylistExists) return;
-    const iLikePlaylist = await this.createPlaylist(
-      user.id,
-      {
+
+    const iLikePlaylist = await this.prisma.playlist.create({
+      data: {
         name: 'Мне нравится',
-        image_key: null,
-        image_url: FAVORITE_PLAYLIST_ICON_URL,
+        image: {
+          create: {
+            image_key: null,
+            image_url: FAVORITE_PLAYLIST_ICON_URL,
+          },
+        },
+        owner_id: userId,
+        is_favorite: true,
       },
-      true,
-    );
+      include: {
+        owner: USER_QUERY,
+        image: IMAGE_QUERY,
+        songs: {
+          include: {
+            song: true,
+          },
+        },
+      },
+    });
 
     await this.prisma.user.update({
       where: {
