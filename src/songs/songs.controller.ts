@@ -58,6 +58,15 @@ export class SongsController {
   }
 
   @UseGuards(AuthGuard)
+  @Post('blacklist/:songId')
+  blacklistSong(
+    @GetUser('id') userId: number,
+    @Param('songId', ParseIntPipe) songId: number,
+  ) {
+    return this.songsService.blackListSong(userId, songId);
+  }
+
+  @UseGuards(AuthGuard)
   @Patch('/favorite/add/:songId')
   addSongToFavoritePlaylist(
     @GetUser('id') userId: number,
