@@ -59,17 +59,32 @@ export class SongsService {
     return randomSong[0];
   }
 
-  async getSongForRadio(dto: getRadioSongDto) {
+  async getSongForRadio(dto: getRadioSongDto, userId: number) {
     const genre = dto.genres[Math.floor(Math.random() * dto.genres.length)];
     const mood = dto.moods[Math.floor(Math.random() * dto.moods.length)];
     const language =
       dto.languages[Math.floor(Math.random() * dto.languages.length)];
+
+    let blacklistedSongs = await this.prisma.users_BlacklistedSongs.findMany({
+      where: {
+        user_id: userId,
+      },
+    });
+
+    let blacklistedSongsIds = [];
+
+    blacklistedSongs.forEach((blacklist) => {
+      blacklistedSongsIds.push(blacklist.song_id);
+    });
 
     let songs = await this.prisma.song.findMany({
       where: {
         genre,
         mood,
         language,
+        id: {
+          notIn: blacklistedSongsIds,
+        },
       },
       include: {
         image: IMAGE_QUERY,
@@ -82,6 +97,9 @@ export class SongsService {
         where: {
           language,
           genre,
+          id: {
+            notIn: blacklistedSongsIds,
+          },
         },
         include: {
           image: IMAGE_QUERY,

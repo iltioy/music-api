@@ -29,10 +29,11 @@ export class SongsController {
     return this.songsService.getRandomSong();
   }
 
+  @UseGuards(AuthGuard)
   @Post('get/radio')
   @HttpCode(HttpStatus.OK)
-  getRadioSong(@Body() dto: getRadioSongDto) {
-    return this.songsService.getSongForRadio(dto);
+  getRadioSong(@Body() dto: getRadioSongDto, @GetUser('id') userId: number) {
+    return this.songsService.getSongForRadio(dto, userId);
   }
 
   @Get('search')

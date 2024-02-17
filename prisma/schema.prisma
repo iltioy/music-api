@@ -54,6 +54,7 @@ model User {
   songs     Song[] 
   owned_playlists Playlist[] @relation("owned_playlists")
   categories Category[]
+  blacklisted_songs Users_BlacklistedSongs[]
 
   createdAt DateTime @default(now())
 
@@ -121,7 +122,20 @@ model Song {
   owner    User? @relation(fields: [owner_id], references: [id], onDelete: SetNull)
 
   playlist_songs OrderedSong[]
+  blacklisted_by Users_BlacklistedSongs[]
+
   @@map("songs")
+}
+
+
+model Users_BlacklistedSongs {
+  id Int @id @default(autoincrement())
+
+  user_id Int
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  song_id Int
+  song Song @relation(fields: [song_id], references: [id], onDelete: Cascade)
 }
 
 model Category {
@@ -158,6 +172,7 @@ model OrderedSong {
   song_id Int?
   song Song? @relation(fields: [song_id], references: [id], onDelete: Cascade)
 }
+
 
 model OrderedPlaylist {
   id Int @id @default(autoincrement())
