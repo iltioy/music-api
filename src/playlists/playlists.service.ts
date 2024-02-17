@@ -432,15 +432,15 @@ export class PlaylistsService {
 
     this.checkAccess(userId, playlist.owner_id);
 
-    const deletedPlaylist = await this.prisma.playlist.delete({
-      where: {
-        id: playlistId,
-      },
-    });
-
     await this.prisma.orderedPlaylist.deleteMany({
       where: {
         playlist_id: playlistId,
+      },
+    });
+
+    const deletedPlaylist = await this.prisma.playlist.delete({
+      where: {
+        id: playlistId,
       },
     });
 
