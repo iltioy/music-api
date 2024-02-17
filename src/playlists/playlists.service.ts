@@ -286,7 +286,7 @@ export class PlaylistsService {
 
     user.liked_playlists.forEach((el) => {
       maxOrder = Math.max(maxOrder, el.order);
-      if (el.playlist.id === playlistId) {
+      if (el.playlist && el.playlist.id === playlistId) {
         isPlaylistAlreadyLiked = true;
       }
     });
@@ -431,12 +431,6 @@ export class PlaylistsService {
     const playlist = await this.checkIfPlaylistExists(playlistId);
 
     this.checkAccess(userId, playlist.owner_id);
-
-    await this.prisma.orderedPlaylist.deleteMany({
-      where: {
-        playlist_id: playlistId,
-      },
-    });
 
     const deletedPlaylist = await this.prisma.playlist.delete({
       where: {

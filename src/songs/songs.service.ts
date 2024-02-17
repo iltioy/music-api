@@ -337,12 +337,6 @@ export class SongsService {
 
     this.checkAccess(userId, song.owner_id);
 
-    await this.prisma.orderedSong.deleteMany({
-      where: {
-        song_id: songId,
-      },
-    });
-
     const deletedSong = await this.prisma.song.delete({
       where: {
         id: songId,

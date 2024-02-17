@@ -156,7 +156,7 @@ model OrderedSong {
   order Int 
 
   song_id Int?
-  song Song? @relation(fields: [song_id], references: [id], onDelete: SetNull)
+  song Song? @relation(fields: [song_id], references: [id], onDelete: Cascade)
 }
 
 model OrderedPlaylist {
@@ -171,7 +171,7 @@ model OrderedPlaylist {
   order Int 
 
   playlist_id Int?
-  playlist Playlist? @relation(fields: [playlist_id], references: [id], onDelete: SetNull)
+  playlist Playlist? @relation(fields: [playlist_id], references: [id], onDelete: Cascade)
 }
 
 model OrderedCategory {
@@ -183,5 +183,5 @@ model OrderedCategory {
   order Int
 
   category_id Int?
-  category Category? @relation(fields: [category_id], references: [id], onDelete: SetNull)
+  category Category? @relation(fields: [category_id], references: [id], onDelete: Cascade)
 }
