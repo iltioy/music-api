@@ -437,8 +437,8 @@ export class SongsService {
     }
   }
 
-  blackListSong(userId: number, songId: number) {
-    const song = this.prisma.song.findUnique({
+  async blackListSong(userId: number, songId: number) {
+    const song = await this.prisma.song.findUnique({
       where: {
         id: songId,
       },
@@ -446,7 +446,7 @@ export class SongsService {
 
     if (!song) throw new NotFoundException();
 
-    const blacklistedSong = this.prisma.users_BlacklistedSongs.findFirst({
+    const blacklistedSong = await this.prisma.users_BlacklistedSongs.findFirst({
       where: {
         user_id: userId,
         song_id: songId,
@@ -456,7 +456,7 @@ export class SongsService {
     if (blacklistedSong)
       throw new BadRequestException('Song already blacklisted');
 
-    this.prisma.users_BlacklistedSongs.create({
+    await this.prisma.users_BlacklistedSongs.create({
       data: {
         user_id: userId,
         song_id: songId,
