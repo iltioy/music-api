@@ -438,6 +438,12 @@ export class PlaylistsService {
       },
     });
 
+    await this.prisma.orderedPlaylist.deleteMany({
+      where: {
+        playlist_id: playlistId,
+      },
+    });
+
     return deletedPlaylist;
   }
 

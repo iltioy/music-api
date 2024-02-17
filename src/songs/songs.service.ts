@@ -343,6 +343,12 @@ export class SongsService {
       },
     });
 
+    await this.prisma.orderedSong.deleteMany({
+      where: {
+        song_id: songId,
+      },
+    });
+
     return deletedSong;
   }
 
