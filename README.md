@@ -27,6 +27,6 @@ Api for Music App (Yandex Music Clone)
 
 # Run locally
 
-## Clone Repo
-## Run `npm install`
-## Run `npm run start:dev`
+### Clone Repo
+### Run `npm install`
+### Run `npm run start:dev`
