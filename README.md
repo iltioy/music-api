@@ -22,11 +22,11 @@
   <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
   [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
-### Music App Api
+# Music App Api
 Api for Music App (Yandex Music Clone)
 
-### Run locally
+# Run locally
 
-# Clone Repo
-# Run `npm install`
-# Run `npm run start:dev`
+## Clone Repo
+## Run `npm install`
+## Run `npm run start:dev`
