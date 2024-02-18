@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { GetUser } from 'src/auth/decorator';
-import { AuthGuard, Roles, SkipAuth } from 'src/auth/guard';
+import { AuthGuard, RoleGuard, Roles, SkipAuth } from 'src/auth/guard';
 import { createCategoryDto } from './dto/create-category.dto';
 import { updateCategoryDto } from './dto';
 import { CategoriesService } from './categories.service';
@@ -25,6 +25,7 @@ export class CategoriesController {
   }
 
   @UseGuards(AuthGuard)
+  @Roles(['admin'])
   @Post('create')
   createCategory(
     @GetUser('id') userId: number,
@@ -34,6 +35,7 @@ export class CategoriesController {
   }
 
   @UseGuards(AuthGuard)
+  @Roles(['admin'])
   @Patch('update/:categoryId')
   updateCategory(
     @GetUser('id') userId: number,
@@ -44,6 +46,7 @@ export class CategoriesController {
   }
 
   @UseGuards(AuthGuard)
+  @Roles(['admin'])
   @Patch(':categoryId/playlist/add/:playlistId')
   addPlaylistToCategory(
     @GetUser('id') userId: number,
@@ -58,6 +61,7 @@ export class CategoriesController {
   }
 
   @UseGuards(AuthGuard)
+  @Roles(['admin'])
   @Delete(':categoryId/playlist/remove/:playlistId')
   removePlaylistFromCategory(
     @GetUser('id') userId: number,
@@ -72,6 +76,7 @@ export class CategoriesController {
   }
 
   @UseGuards(AuthGuard)
+  @Roles(['admin'])
   @Delete('delete/:categoryId')
   removeCategory(
     @GetUser('id') userId: number,
