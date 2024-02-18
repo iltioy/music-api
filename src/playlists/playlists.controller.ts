@@ -16,6 +16,7 @@ import { GetUser } from 'src/auth/decorator';
 import { PlaylistsService } from './playlists.service';
 import { createPlaylistDto } from './dto/create-playlist.dto';
 import { updatePlaylistDto } from './dto';
+import { reorderPlaylistDto } from './dto/reorder-playlist';
 
 @UseGuards(AuthGuard)
 @Controller('playlists')
@@ -80,6 +81,15 @@ export class PlaylistsController {
     @Body() dto: updatePlaylistDto,
   ) {
     return this.playlistService.updatePlaylist(userId, playlistId, dto);
+  }
+
+  @Patch('reorder/:playlistId')
+  reorderPlaylist(
+    @GetUser('id') userId: number,
+    @Param('playlistId', ParseIntPipe) playlistId,
+    @Body() dto: reorderPlaylistDto,
+  ) {
+    return this.playlistService.reorderPlaylist(userId, playlistId, dto);
   }
 
   @Delete('delete/:playlistId')

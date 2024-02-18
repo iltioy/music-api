@@ -17,6 +17,7 @@ import {
   SELECT_USER_QUERY,
   USER_QUERY,
 } from 'src/queries';
+import { reorderPlaylistDto } from './dto/reorder-playlist';
 
 @Injectable()
 export class PlaylistsService {
@@ -263,6 +264,35 @@ export class PlaylistsService {
     });
 
     return updatedPlatlist;
+  }
+
+  async reorderPlaylist(
+    userId: number,
+    playlistId: number,
+    dto: reorderPlaylistDto,
+  ) {
+    const playlist = await this.checkIfPlaylistExists(playlistId);
+
+    this.checkAccess(userId, playlist.owner_id);
+
+    let highestOrder = dto.songs.length;
+
+    const promises = dto.songs.map(async (song, index) => {
+      if (!song || !song.id) return;
+      await this.prisma.orderedSong.updateMany({
+        data: {
+          order: highestOrder - index,
+        },
+        where: {
+          playlist_id: playlistId,
+          song_id: song.id,
+        },
+      });
+    });
+
+    await Promise.all(promises);
+
+    return { success: true };
   }
 
   async handleTogglePlaylistLike(userId: number, playlistId: number) {
