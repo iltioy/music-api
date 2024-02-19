@@ -5,7 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { IMAGE_QUERY, ORDERED_PLAYLISY_QUERY_SELECT } from 'src/queries';
+import {
+  IMAGE_QUERY,
+  ORDERED_PLAYLISY_QUERY_SELECT,
+  ORDERED_SONG_QUERY_SELECT,
+  USER_QUERY,
+} from 'src/queries';
 import { createCategoryDto, updateCategoryDto } from './dto';
 
 @Injectable()
@@ -33,7 +38,30 @@ export class CategoriesService {
   }
 
   async getAllCategories() {
-    const categories = await this.prisma.category.findMany();
+    const categories = await this.prisma.category.findMany({
+      include: {
+        playlists: {
+          orderBy: {
+            order: 'asc',
+          },
+          select: {
+            order: true,
+            playlist: {
+              include: {
+                owner: USER_QUERY,
+                image: IMAGE_QUERY,
+                songs: {
+                  orderBy: {
+                    order: 'desc',
+                  },
+                  select: ORDERED_SONG_QUERY_SELECT,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
     return categories;
   }
 
