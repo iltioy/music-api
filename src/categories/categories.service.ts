@@ -32,7 +32,13 @@ export class CategoriesService {
     return category;
   }
 
+  async getAllCategories() {
+    const categories = await this.prisma.category.findMany();
+    return categories;
+  }
+
   async createCategory(userId: number, dto: createCategoryDto) {
+    await this.checkAdmin(userId);
     const category = await this.prisma.category.create({
       data: {
         name: dto.name,
@@ -52,7 +58,7 @@ export class CategoriesService {
   ) {
     const category = await this.checkIfCategoryExists(categoryId);
 
-    this.checkAccess(userId, category.owner_id);
+    await this.checkAccess(userId, category.owner_id);
 
     const updatedCategory = await this.prisma.category.update({
       where: {
@@ -80,15 +86,15 @@ export class CategoriesService {
     playlistId: number,
   ) {
     const category = await this.checkIfCategoryExists(categoryId);
-
-    this.checkAccess(userId, category.owner_id);
+    await this.checkAccess(userId, category.owner_id);
 
     let isInCategory = false;
-    category.playlists.map((playlisy) =>
-      playlisy.playlist_id === playlistId
-        ? (isInCategory = true)
-        : (isInCategory = false),
-    );
+
+    category.playlists.forEach((playlist) => {
+      if (playlist.playlist_id === playlistId) {
+        isInCategory = true;
+      }
+    });
 
     if (isInCategory) throw new BadRequestException();
 
@@ -124,7 +130,7 @@ export class CategoriesService {
   ) {
     const category = await this.checkIfCategoryExists(categoryId);
 
-    this.checkAccess(userId, category.owner_id);
+    await this.checkAccess(userId, category.owner_id);
 
     const updatedCategory = await this.prisma.category.update({
       where: {
@@ -153,7 +159,7 @@ export class CategoriesService {
   async deleteCategory(userId: number, categoryId: number) {
     const category = await this.checkIfCategoryExists(categoryId);
 
-    this.checkAccess(userId, category.owner_id);
+    await this.checkAccess(userId, category.owner_id);
 
     const deletedCategory = await this.prisma.category.delete({
       where: {
@@ -179,7 +185,25 @@ export class CategoriesService {
     return category;
   }
 
-  checkAccess(userId: number, ownerId: number) {
-    if (userId !== ownerId) throw new ForbiddenException();
+  async checkAccess(userId: number, ownerId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (userId === ownerId || user.role === 'admin') return;
+    throw new ForbiddenException();
+  }
+
+  async checkAdmin(userId: number) {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (user.role === 'admin') return;
+    throw new ForbiddenException();
   }
 }
