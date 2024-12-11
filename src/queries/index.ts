@@ -1,15 +1,8 @@
-const IMAGE_QUERY = {
-  select: {
-    image_key: true,
-    image_url: true,
-  },
-};
-
 const USER_QUERY = {
   select: {
     username: true,
     email: true,
-    image: IMAGE_QUERY,
+    image: true,
     role: true,
   },
 };
@@ -18,7 +11,7 @@ const ORDERED_SONG_QUERY_SELECT = {
   order: true,
   song: {
     include: {
-      image: IMAGE_QUERY,
+      image: true,
     },
   },
 };
@@ -34,7 +27,7 @@ const ORDERED_PLAYLISY_QUERY_SELECT = {
   order: true,
   playlist: {
     include: {
-      image: IMAGE_QUERY,
+      image: true,
       owner: USER_QUERY,
     },
   },
@@ -45,7 +38,7 @@ const SELECT_USER_QUERY = {
   role: true,
   username: true,
   email: true,
-  image: IMAGE_QUERY,
+  image: true,
   added_playlists: {
     select: ORDERED_PLAYLISY_QUERY_SELECT,
   },
@@ -67,13 +60,13 @@ const SELECT_ME_USER_QUERY = {
   role: true,
   username: true,
   email: true,
-  image: IMAGE_QUERY,
+  image: true,
   added_playlists: {
     select: {
       order: true,
       playlist: {
         include: {
-          image: IMAGE_QUERY,
+          image: true,
           owner: USER_QUERY,
           songs: {
             orderBy: {
@@ -99,7 +92,6 @@ const SELECT_ME_USER_QUERY = {
 };
 
 export {
-  IMAGE_QUERY,
   USER_QUERY,
   SELECT_USER_QUERY,
   ORDERED_SONG_QUERY_SELECT,

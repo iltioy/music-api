@@ -8,8 +8,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { createSongDto } from './dto';
 import { updateSongDto } from './dto/update-song.dto';
 import { DEFAULT_MUSIC_IMAGE_URL } from 'src/constants';
-import { IMAGE_QUERY, USER_QUERY } from 'src/queries';
-import { Playlist } from '@prisma/client';
+import { USER_QUERY } from 'src/queries';
 import { PlaylistsService } from 'src/playlists/playlists.service';
 import { getRadioSongDto } from './dto/get-radio-song.dto';
 
@@ -31,7 +30,6 @@ export class SongsService {
         id: songId,
       },
       include: {
-        image: IMAGE_QUERY,
         owner: USER_QUERY,
       },
     });
@@ -51,7 +49,6 @@ export class SongsService {
       take: 1,
       skip: skip,
       include: {
-        image: IMAGE_QUERY,
         owner: USER_QUERY,
       },
     });
@@ -87,7 +84,6 @@ export class SongsService {
         },
       },
       include: {
-        image: IMAGE_QUERY,
         owner: USER_QUERY,
       },
     });
@@ -102,7 +98,6 @@ export class SongsService {
           },
         },
         include: {
-          image: IMAGE_QUERY,
           owner: USER_QUERY,
         },
       });
@@ -130,9 +125,7 @@ export class SongsService {
     const song = await this.prisma.song.create({
       data: {
         author: dto.author,
-        image: {
-          create: songImage,
-        },
+        image_url: songImage.image_url,
         name: dto.name,
         album: dto.album,
         owner_id: userId,
@@ -140,12 +133,11 @@ export class SongsService {
       },
       include: {
         owner: USER_QUERY,
-        image: IMAGE_QUERY,
       },
     });
 
     if (!song) {
-      throw new BadRequestException();
+      throw new BadRequestException('Could not create the song');
     }
 
     return song;
@@ -156,9 +148,6 @@ export class SongsService {
       where: {
         id: songId,
       },
-      include: {
-        image: IMAGE_QUERY,
-      },
     });
 
     if (!song) {
@@ -167,12 +156,9 @@ export class SongsService {
 
     this.checkAccess(userId, song.owner_id);
 
-    let songImage = song.image;
-    if (dto.image_key) {
-      songImage = {
-        image_key: dto.image_key,
-        image_url: dto.image_url,
-      };
+    let songImage = song.image_url;
+    if (dto.image_url) {
+      songImage = dto.image_url;
     }
 
     const updatedSong = await this.prisma.song.update({
@@ -182,15 +168,10 @@ export class SongsService {
       data: {
         album: dto.album,
         author: dto.author,
-        image: {
-          update: {
-            data: songImage,
-          },
-        },
+        image_url: songImage,
         name: dto.name,
       },
       include: {
-        image: IMAGE_QUERY,
         owner: USER_QUERY,
       },
     });
@@ -208,11 +189,11 @@ export class SongsService {
         id: userId,
       },
       include: {
-        added_playlists: {
+        users_to_playlists: {
           include: {
             playlist: {
               include: {
-                songs: true,
+                songs_to_playlists: true,
               },
             },
           },
@@ -220,17 +201,25 @@ export class SongsService {
       },
     });
 
-    const existingPlaylist = await this.prisma.playlist.findFirst({
+    const existingPlaylist = await this.prisma.users_to_playlists.findFirst({
       where: {
-        owner_id: userId,
+        user_id: userId,
         is_favorite: true,
       },
       include: {
-        songs: true,
+        playlist: {
+          include: {
+            songs_to_playlists: {
+              include: {
+                song: true,
+              },
+            },
+          },
+        },
       },
     });
 
-    if (!user) throw new NotFoundException();
+    if (!user) throw new NotFoundException('User was not found by id');
 
     if (!existingPlaylist) {
       let playlist = await this.playlistsService.createFavoritePlaylist(userId);
@@ -245,7 +234,7 @@ export class SongsService {
     }
 
     let isSongInFavoritePlaylist = false;
-    existingPlaylist.songs.map((song) => {
+    existingPlaylist.playlist.songs_to_playlists.map((song) => {
       if (song.song_id === songId) {
         isSongInFavoritePlaylist = true;
       }

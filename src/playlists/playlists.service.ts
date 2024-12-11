@@ -35,12 +35,13 @@ export class PlaylistsService {
       },
       include: {
         owner: USER_QUERY,
-        image: IMAGE_QUERY,
-        songs: {
+        songs_to_playlists: {
+          include: {
+            song: true,
+          },
           orderBy: {
             order: 'desc',
           },
-          select: ORDERED_SONG_QUERY_SELECT,
         },
       },
     });
@@ -50,6 +51,34 @@ export class PlaylistsService {
     }
 
     return playlist;
+  }
+
+  async getAddedPlaylists(userId: number) {
+    const playlists = await this.prisma.users_to_playlists.findMany({
+      where: {
+        user_id: userId,
+        is_liked: false,
+      },
+      include: {
+        playlist: true,
+      },
+    });
+
+    return playlists;
+  }
+
+  async getFavoritePlaylists(userId: number) {
+    const playlists = await this.prisma.users_to_playlists.findMany({
+      where: {
+        user_id: userId,
+        is_liked: true,
+      },
+      include: {
+        playlist: true,
+      },
+    });
+
+    return playlists;
   }
 
   async getPlaylistsByUsername(username: string) {
@@ -226,12 +255,15 @@ export class PlaylistsService {
 
     let isInPlaylist = false;
     let maxOrder = 0;
-    playlist.songs.forEach((song) => {
-      song.song_id === songId ? (isInPlaylist = true) : (isInPlaylist = false);
+    playlist.songs_to_playlists.forEach((song) => {
+      if (song.song_id === songId) {
+        isInPlaylist = true;
+      }
       maxOrder = Math.max(maxOrder, song.order);
     });
 
-    if (isInPlaylist) throw new BadRequestException();
+    if (isInPlaylist)
+      throw new BadRequestException('Song is already in the playlist');
 
     const song = await this.prisma.song.findUnique({
       where: {
@@ -239,14 +271,14 @@ export class PlaylistsService {
       },
     });
 
-    if (!song) throw new NotFoundException();
+    if (!song) throw new NotFoundException('Song was not found by id');
 
     const updatedPlatlist = await this.prisma.playlist.update({
       where: {
         id: playlistId,
       },
       data: {
-        songs: {
+        songs_to_playlists: {
           create: {
             order: maxOrder + 1,
             song_id: songId,
@@ -254,11 +286,13 @@ export class PlaylistsService {
         },
       },
       include: {
-        songs: {
+        songs_to_playlists: {
           orderBy: {
             order: 'desc',
           },
-          select: ORDERED_SONG_QUERY_SELECT,
+          include: {
+            song: true,
+          },
         },
       },
     });
@@ -362,11 +396,15 @@ export class PlaylistsService {
         id: userId,
       },
       include: {
-        added_playlists: {
+        users_to_playlists: {
           include: {
             playlist: {
               include: {
-                songs: true,
+                songs_to_playlists: {
+                  include: {
+                    song: true,
+                  },
+                },
               },
             },
           },
@@ -376,8 +414,8 @@ export class PlaylistsService {
 
     let isFavoritePlaylistExists = false;
 
-    user.added_playlists.map((el) => {
-      if (el.playlist.is_favorite) {
+    user.users_to_playlists.map((el) => {
+      if (el.is_favorite) {
         isFavoritePlaylistExists = true;
       }
     });
@@ -387,37 +425,20 @@ export class PlaylistsService {
     const iLikePlaylist = await this.prisma.playlist.create({
       data: {
         name: 'Мне нравится',
-        image: {
-          create: {
-            image_key: null,
-            image_url: FAVORITE_PLAYLIST_ICON_URL,
-          },
-        },
+        image_url: FAVORITE_PLAYLIST_ICON_URL,
         owner_id: userId,
-        is_favorite: true,
       },
       include: {
         owner: USER_QUERY,
-        image: IMAGE_QUERY,
-        songs: {
-          include: {
-            song: true,
-          },
-        },
       },
     });
 
-    await this.prisma.user.update({
-      where: {
-        id: userId,
-      },
+    await this.prisma.users_to_playlists.create({
       data: {
-        added_playlists: {
-          create: {
-            order: 1,
-            playlist_id: iLikePlaylist.id,
-          },
-        },
+        user_id: userId,
+        playlist_id: iLikePlaylist.id,
+        order: -1,
+        is_favorite: true,
       },
     });
 
@@ -438,18 +459,20 @@ export class PlaylistsService {
         id: playlistId,
       },
       data: {
-        songs: {
+        songs_to_playlists: {
           deleteMany: {
             song_id: songId,
           },
         },
       },
       include: {
-        songs: {
+        songs_to_playlists: {
           orderBy: {
             order: 'desc',
           },
-          select: ORDERED_SONG_QUERY_SELECT,
+          include: {
+            song: true,
+          },
         },
       },
     });
@@ -477,12 +500,15 @@ export class PlaylistsService {
         id: playlistId,
       },
       include: {
-        songs: true,
-        image: IMAGE_QUERY,
+        songs_to_playlists: {
+          include: {
+            song: true,
+          },
+        },
       },
     });
 
-    if (!playlist) throw new NotFoundException();
+    if (!playlist) throw new NotFoundException('Playlist was not found');
 
     return playlist;
   }

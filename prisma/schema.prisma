@@ -10,60 +10,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Image {
-  id Int @id @default(autoincrement())
-
-  user_id Int?  @unique
-  user    User? @relation(fields: [user_id], references: [id])
-
-  song_id Int?  @unique
-  song    Song? @relation(fields: [song_id], references: [id])
-
-  playlist_id Int?      @unique
-  playlist    Playlist? @relation(fields: [playlist_id], references: [id])
-
-  image_url String?
-  image_key String?
-
-  @@map("images")
-}
-
 model verificationCodeToEmail {
   id Int @id @default(autoincrement())
 
   verification_code String
-  email String
+  email             String
+
+  @@map("varification_code_to_email")
 }
 
 model User {
   id Int @id @default(autoincrement())
 
-  username String @unique
-  email    String @unique
-  hash     String
+  username      String  @unique
+  email         String  @unique
+  hash          String
   refresh_token String?
-  role String @default("user")
-
-  image Image?
+  role          String  @default("user")
+  image_url String
 
   restore_password_link_id String?
-  
-  added_playlists OrderedPlaylist[] @relation("added_playlists")
-  liked_playlists OrderedPlaylist[] @relation("liked_playlists")
 
-  songs     Song[] 
-  owned_playlists Playlist[] @relation("owned_playlists")
-  categories Category[]
+  songs             Song[]
+  owned_playlists   Playlist[]               @relation("owned_playlists")
+  categories        Category[]
   blacklisted_songs Users_BlacklistedSongs[]
 
   createdAt DateTime @default(now())
+
+  users_to_playlists users_to_playlists[]
 
   @@map("users")
 }
 
 model blacklisted_refresh_tokens {
-  id Int @id @default(autoincrement())
+  id    Int    @id @default(autoincrement())
   token String
+
+  @@map("blacklisted_refresh_tokens")
 }
 
 model Playlist {
@@ -71,17 +55,16 @@ model Playlist {
 
   name String
 
-  image Image?
+  owner_id Int?
+  owner    User? @relation(fields: [owner_id], references: [id], onDelete: SetNull, name: "owned_playlists")
 
-  owner_id    Int?
-  owner       User?    @relation(fields: [owner_id], references: [id], onDelete: SetNull, name: "owned_playlists")
+  image_url String
 
-  is_favorite Boolean @default(false)
-
-  songs OrderedSong[]
-  ordered_playlists OrderedPlaylist[]
-  chart_name String? @unique
-  chart Chart? @relation(fields: [chart_name], references: [chart_page])
+  chart_name              String?                   @unique
+  chart                   Chart?                    @relation(fields: [chart_name], references: [chart_page])
+  users_to_playlists      users_to_playlists[]
+  songs_to_playlists      songs_to_playlists[]
+  playlists_to_categories playlists_to_categories[]
 
   @@map("playlists")
 }
@@ -112,42 +95,42 @@ model Song {
   author String
   album  String?
 
-  genre Genre?
-  mood Mood?
+  genre    Genre?
+  mood     Mood?
   language Language?
 
-  image Image?
+  image_url String
 
   owner_id Int?
   owner    User? @relation(fields: [owner_id], references: [id], onDelete: SetNull)
 
-  playlist_songs OrderedSong[]
-  blacklisted_by Users_BlacklistedSongs[]
+  blacklisted_by     Users_BlacklistedSongs[]
+  songs_to_playlists songs_to_playlists[]
 
   @@map("songs")
 }
-
 
 model Users_BlacklistedSongs {
   id Int @id @default(autoincrement())
 
   user_id Int
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   song_id Int
-  song Song @relation(fields: [song_id], references: [id], onDelete: Cascade)
+  song    Song @relation(fields: [song_id], references: [id], onDelete: Cascade)
+
+  @@map("blacklisted_songs")
 }
 
 model Category {
   id   Int    @id @default(autoincrement())
   name String
 
-  playlists OrderedPlaylist[]
-
   owner_id Int?
-  owner User? @relation(fields: [owner_id], references: [id], onDelete: SetNull)
+  owner    User? @relation(fields: [owner_id], references: [id], onDelete: SetNull)
 
-  ordered_category OrderedCategory[]
+  playlists_to_categories playlists_to_categories[]
+  categories_to_charts    categories_to_charts[]
 
   @@map("categories")
 }
@@ -157,46 +140,63 @@ model Chart {
 
   chart_page String @unique
 
-  categories OrderedCategory[]
-  trend_playlist Playlist?
+  trend_playlist       Playlist?
+  categories_to_charts categories_to_charts[]
+
+  @@map("charts")
 }
 
-model OrderedSong {
+model users_to_playlists {
   id Int @id @default(autoincrement())
+
+  user_id Int
+  user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   playlist_id Int
-  playlist Playlist @relation(fields: [playlist_id], references: [id], onDelete: Cascade)
+  playlist    Playlist @relation(fields: [playlist_id], references: [id], onDelete: Cascade)
 
-  order Int 
-
-  song_id Int?
-  song Song? @relation(fields: [song_id], references: [id], onDelete: Cascade)
-}
-
-
-model OrderedPlaylist {
-  id Int @id @default(autoincrement())
-
-  category_id Int?
-  category Category? @relation(fields: [category_id], references: [id], onDelete: SetNull)
-
-  addded_users User[] @relation("added_playlists")
-  liked_users User[] @relation("liked_playlists")
-
-  order Int 
-
-  playlist_id Int?
-  playlist Playlist? @relation(fields: [playlist_id], references: [id], onDelete: Cascade)
-}
-
-model OrderedCategory {
-  id Int @id @default(autoincrement())
-
-  chart_page String
-  chart Chart @relation(fields: [chart_page], references: [chart_page], onDelete: Cascade)
+  is_favorite Boolean @default(false)
+  is_liked Boolean @default(false)
 
   order Int
 
-  category_id Int?
-  category Category? @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  @@map("users_to_paylists")
+}
+
+model songs_to_playlists {
+  id Int @id @default(autoincrement())
+
+  song_id Int
+  song    Song @relation(fields: [song_id], references: [id], onDelete: Cascade)
+
+  playlist_id Int
+  playlist    Playlist @relation(fields: [playlist_id], references: [id], onDelete: Cascade)
+
+  order Int
+
+  @@map("songs_to_playlists")
+}
+
+model playlists_to_categories {
+  id Int @id @default(autoincrement())
+
+  playlist_id Int
+  playlist    Playlist @relation(fields: [playlist_id], references: [id], onDelete: Cascade)
+
+  category_id Int
+  category    Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  @@map("playlists_to_categories")
+}
+
+model categories_to_charts {
+  id Int @id @default(autoincrement())
+
+  category_id Int
+  category    Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  chart_id Int
+  chart    Chart @relation(fields: [chart_id], references: [id], onDelete: Cascade)
+
+  @@map("categories_to_charts")
 }
