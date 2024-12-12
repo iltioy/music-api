@@ -11,10 +11,14 @@ import {
   USER_QUERY,
 } from 'src/queries';
 import { createCategoryDto, updateCategoryDto } from './dto';
+import { CategoriesFormatter } from './categories.formatter';
 
 @Injectable()
 export class CategoriesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private categoriesFormatter: CategoriesFormatter,
+  ) {}
 
   async getCategory(categoryId: number) {
     const category = await this.prisma.category.findUnique({
@@ -33,36 +37,12 @@ export class CategoriesService {
 
     if (!category) throw new NotFoundException();
 
-    return category;
+    return this.categoriesFormatter.format(category);
   }
 
   async getAllCategories() {
-    const categories = await this.prisma.category.findMany({
-      include: {
-        playlists_to_categories: {
-          orderBy: {
-            order: 'asc',
-          },
-          select: {
-            order: true,
-            playlist: {
-              include: {
-                owner: USER_QUERY,
-                songs_to_playlists: {
-                  orderBy: {
-                    order: 'desc',
-                  },
-                  include: {
-                    song: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-    return categories;
+    const categories = await this.prisma.category.findMany({});
+    return this.categoriesFormatter.formatMany(categories);
   }
 
   async createCategory(userId: number, dto: createCategoryDto) {
@@ -76,7 +56,7 @@ export class CategoriesService {
 
     if (!category) throw new BadRequestException();
 
-    return category;
+    return this.categoriesFormatter.format(category);
   }
 
   async updateCategory(
@@ -95,27 +75,9 @@ export class CategoriesService {
       data: {
         name: dto.name,
       },
-      include: {
-        playlists_to_categories: {
-          orderBy: {
-            order: 'asc',
-          },
-          include: {
-            playlist: {
-              include: {
-                songs_to_playlists: {
-                  include: {
-                    song: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
     });
 
-    return updatedCategory;
+    return this.categoriesFormatter.format(updatedCategory);
   }
 
   async addPlaylistToCategory(
@@ -148,19 +110,9 @@ export class CategoriesService {
           },
         },
       },
-      include: {
-        playlists_to_categories: {
-          orderBy: {
-            order: 'asc',
-          },
-          include: {
-            playlist: true,
-          },
-        },
-      },
     });
 
-    return updatedCategory;
+    return this.categoriesFormatter.format(updatedCategory);
   }
 
   async removePlaylistFromCategory(
@@ -183,17 +135,9 @@ export class CategoriesService {
           },
         },
       },
-      include: {
-        playlists_to_categories: {
-          orderBy: {
-            order: 'asc',
-          },
-          select: ORDERED_PLAYLISY_QUERY_SELECT,
-        },
-      },
     });
 
-    return updatedCategory;
+    return this.categoriesFormatter.format(updatedCategory);
   }
 
   async deleteCategory(userId: number, categoryId: number) {

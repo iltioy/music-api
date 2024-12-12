@@ -19,6 +19,7 @@ export class SongsFormatter {
             username: true,
             role: true,
             image_url: true,
+            email: true,
           },
         },
       },
@@ -52,6 +53,7 @@ export class SongsFormatter {
           select: {
             id: true,
             username: true,
+            email: true,
             role: true,
             image_url: true,
           },

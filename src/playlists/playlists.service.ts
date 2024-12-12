@@ -11,7 +11,7 @@ import {
   DEFAULT_PLAYLISY_IMAGE_URL,
   FAVORITE_PLAYLIST_ICON_URL,
 } from 'src/constants';
-import { SELECT_USER_QUERY, USER_QUERY } from 'src/queries';
+import { SELECT_USER_QUERY } from 'src/queries';
 import { reorderPlaylistDto } from './dto/reorder-playlist';
 import { PlaylistsFormatter } from './playlists.formatter';
 
@@ -45,6 +45,9 @@ export class PlaylistsService {
       include: {
         playlist: true,
       },
+      orderBy: {
+        order: 'asc',
+      },
     });
 
     return playlists;
@@ -58,6 +61,9 @@ export class PlaylistsService {
       },
       include: {
         playlist: true,
+      },
+      orderBy: {
+        order: 'asc',
       },
     });
 
@@ -212,6 +218,7 @@ export class PlaylistsService {
     playlistId: number,
     dto: reorderPlaylistDto,
   ) {
+    console.log(dto.songs);
     const playlist = await this.checkIfPlaylistExists(playlistId);
 
     this.checkAccess(userId, playlist.owner_id);
@@ -256,8 +263,9 @@ export class PlaylistsService {
     let maxOrder = 0;
 
     user.users_to_playlists.forEach((el) => {
+      if (!el.is_liked) return;
       maxOrder = Math.max(maxOrder, el.order);
-      if (el.playlist && el.playlist.id === playlistId) {
+      if (el.playlist && el.playlist.id === playlistId && el.is_liked) {
         isPlaylistAlreadyLiked = true;
       }
     });
@@ -273,24 +281,19 @@ export class PlaylistsService {
             create: {
               order: maxOrder + 1,
               playlist_id: playlistId,
+              is_liked: true,
             },
           },
         },
         select: SELECT_USER_QUERY,
       });
     } else {
-      updatedUser = await this.prisma.user.update({
+      updatedUser = await this.prisma.users_to_playlists.deleteMany({
         where: {
-          id: userId,
+          user_id: userId,
+          playlist_id: playlistId,
+          is_liked: true,
         },
-        data: {
-          users_to_playlists: {
-            deleteMany: {
-              playlist_id: playlistId,
-            },
-          },
-        },
-        select: SELECT_USER_QUERY,
       });
     }
 

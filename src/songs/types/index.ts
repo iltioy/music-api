@@ -1,4 +1,4 @@
-import { FromattedUser } from 'src/users/types';
+import { FormattedUser } from 'src/users/types';
 
 export interface FormattedSong {
   id: number;
@@ -13,7 +13,7 @@ export interface FormattedSong {
 
   image_url: string;
 
-  owner: FromattedUser;
+  owner: FormattedUser;
 
   order?: number;
 }

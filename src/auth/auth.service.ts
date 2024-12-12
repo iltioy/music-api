@@ -263,6 +263,7 @@ export class AuthService {
     if (existingUser) {
       return false;
     }
+
     return true;
   }
 }

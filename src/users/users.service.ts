@@ -22,6 +22,7 @@ import {
 } from './dto/restore-password.dto';
 import * as argon from 'argon2';
 import { PlaylistsService } from 'src/playlists/playlists.service';
+import { UsersFormatter } from './users.formatter';
 
 @Injectable()
 export class UsersService {
@@ -29,6 +30,7 @@ export class UsersService {
     private prisma: PrismaService,
     private mailService: MailerService,
     private playlistsService: PlaylistsService,
+    private usersFormatter: UsersFormatter,
   ) {}
 
   async createUser(dto: createUserDto) {
@@ -52,7 +54,6 @@ export class UsersService {
           username: `User${maxUserId + 1}`,
           image_url: DEFAULT_USER_IMAGE_URL,
         },
-        select: SELECT_USER_QUERY,
       });
 
       this.playlistsService.createFavoritePlaylist(user.id);
@@ -61,12 +62,11 @@ export class UsersService {
         where: {
           id: user.id,
         },
-        select: SELECT_USER_QUERY,
       });
 
       console.log(updatedUser);
 
-      return updatedUser;
+      return this.usersFormatter.format(updatedUser);
     } catch (error) {
       throw error;
     }
@@ -77,38 +77,13 @@ export class UsersService {
       where: {
         username,
       },
-      select: {
-        id: true,
-        role: true,
-        username: true,
-        email: true,
-        image_url: true,
-        users_to_playlists: {
-          select: {
-            order: true,
-            playlist: {
-              include: {
-                owner: USER_QUERY,
-                songs_to_playlists: {
-                  orderBy: {
-                    order: 'desc',
-                  },
-                  include: {
-                    song: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
     });
 
     if (!user) {
       throw new NotFoundException();
     }
 
-    return user;
+    return this.usersFormatter.format(user);
   }
 
   async updateUser(userId: number, dto: updateUserDto) {
@@ -121,14 +96,13 @@ export class UsersService {
           username: dto.username,
           image_url: dto.image_url,
         },
-        select: SELECT_USER_QUERY,
       });
 
       if (!updateUserDto) {
         throw new BadRequestException();
       }
 
-      return updatedUser;
+      return this.usersFormatter.format(updatedUser);
     } catch (error) {
       if (error.code === 'P2002') {
         throw new ForbiddenException('This username is already taken!');
@@ -222,10 +196,9 @@ export class UsersService {
           },
         },
       },
-      select: SELECT_USER_QUERY,
     });
 
-    return updatedUser;
+    return this.usersFormatter.format(updatedUser);
   }
 
   async removePlaylistFromUserCollection(userId: number, playlistId: number) {
@@ -242,10 +215,9 @@ export class UsersService {
           },
         },
       },
-      select: SELECT_USER_QUERY,
     });
 
-    return updatedUser;
+    return this.usersFormatter.format(updatedUser);
   }
 
   async restorePassword(recovery_link_id: string, dto: restorePasswordDto) {
