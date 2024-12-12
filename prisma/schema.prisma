@@ -186,6 +186,8 @@ model playlists_to_categories {
   category_id Int
   category    Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
 
+  order Int
+
   @@map("playlists_to_categories")
 }
 
@@ -197,6 +199,8 @@ model categories_to_charts {
 
   chart_id Int
   chart    Chart @relation(fields: [chart_id], references: [id], onDelete: Cascade)
+
+  order Int
 
   @@map("categories_to_charts")
 }

@@ -240,7 +240,7 @@ export class AuthService {
 
       if (!dto.test) {
         await this.mailService.sendMail({
-          from: 'tema.illar@outlook.com',
+          from: 'tema.illar@mail.ru',
           to: dto.email,
           subject: 'Verification code',
           text: `Your verification code: ${virifyEmailRecord.verification_code}`,

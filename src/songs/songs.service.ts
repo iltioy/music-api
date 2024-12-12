@@ -11,6 +11,8 @@ import { DEFAULT_MUSIC_IMAGE_URL } from 'src/constants';
 import { USER_QUERY } from 'src/queries';
 import { PlaylistsService } from 'src/playlists/playlists.service';
 import { getRadioSongDto } from './dto/get-radio-song.dto';
+import { SongsFormatter } from './songs.formatted';
+import { PlaylistsFormatter } from 'src/playlists/playlists.formatter';
 
 @Injectable()
 export class SongsService {
@@ -22,6 +24,8 @@ export class SongsService {
   constructor(
     private prisma: PrismaService,
     private playlistsService: PlaylistsService,
+    private songsFromatter: SongsFormatter,
+    private playlistsFormatter: PlaylistsFormatter,
   ) {}
 
   async getSong(songId: number) {
@@ -29,16 +33,13 @@ export class SongsService {
       where: {
         id: songId,
       },
-      include: {
-        owner: USER_QUERY,
-      },
     });
 
     if (!song) {
       throw new NotFoundException();
     }
 
-    return song;
+    return this.songsFromatter.format(song);
   }
 
   async getRandomSong() {
@@ -48,12 +49,9 @@ export class SongsService {
     const randomSong = await this.prisma.song.findMany({
       take: 1,
       skip: skip,
-      include: {
-        owner: USER_QUERY,
-      },
     });
 
-    return randomSong[0];
+    return this.songsFromatter.format(randomSong[0]);
   }
 
   async getSongForRadio(dto: getRadioSongDto, userId: number) {
@@ -83,9 +81,6 @@ export class SongsService {
           notIn: blacklistedSongsIds,
         },
       },
-      include: {
-        owner: USER_QUERY,
-      },
     });
 
     if (songs.length === 0) {
@@ -109,7 +104,7 @@ export class SongsService {
       return this.getRandomSong();
     }
     console.log(song, songs);
-    return song;
+    return this.songsFromatter.format(song);
   }
 
   async createSong(userId: number, dto: createSongDto) {
@@ -131,16 +126,13 @@ export class SongsService {
         owner_id: userId,
         url: dto.url,
       },
-      include: {
-        owner: USER_QUERY,
-      },
     });
 
     if (!song) {
       throw new BadRequestException('Could not create the song');
     }
 
-    return song;
+    return this.songsFromatter.format(song);
   }
 
   async updateSong(userId: number, songId: number, dto: updateSongDto) {
@@ -171,16 +163,13 @@ export class SongsService {
         image_url: songImage,
         name: dto.name,
       },
-      include: {
-        owner: USER_QUERY,
-      },
     });
 
     if (!updatedSong) {
       throw new BadRequestException();
     }
 
-    return updatedSong;
+    return this.songsFromatter.format(updatedSong);
   }
 
   async addSongToFavoritePlaylist(userId: number, songId: number) {
@@ -255,7 +244,7 @@ export class SongsService {
       );
     }
 
-    return updatedPlaylist;
+    return this.playlistsFormatter.format(updatedPlaylist);
   }
 
   async handleToggleSongLike(userId: number, songId: number) {
@@ -272,19 +261,29 @@ export class SongsService {
     let isSongAlreadyLiked = false;
     let maxOrder = 0;
 
-    let favoritePlaylist = await this.prisma.playlist.findFirst({
-      where: {
-        owner_id: userId,
-        is_favorite: true,
-      },
-      include: {
-        songs: {
-          include: {
-            song: true,
+    let favoritePlaylistRecord = await this.prisma.users_to_playlists.findFirst(
+      {
+        where: {
+          user_id: userId,
+          is_favorite: true,
+        },
+        include: {
+          playlist: {
+            include: {
+              songs_to_playlists: {
+                include: {
+                  song: true,
+                },
+              },
+            },
           },
         },
       },
-    });
+    );
+
+    let favoritePlaylist = await this.playlistsFormatter.format(
+      favoritePlaylistRecord.playlist,
+    );
 
     if (!favoritePlaylist) {
       favoritePlaylist = await this.playlistsService.createFavoritePlaylist(
@@ -294,7 +293,7 @@ export class SongsService {
 
     favoritePlaylist.songs.forEach((el) => {
       maxOrder = Math.max(maxOrder, el.order);
-      if (el.song.id === songId) {
+      if (el.id === songId) {
         isSongAlreadyLiked = true;
       }
     });
@@ -305,7 +304,7 @@ export class SongsService {
           id: favoritePlaylist.id,
         },
         data: {
-          songs: {
+          songs_to_playlists: {
             create: {
               order: maxOrder + 1,
               song_id: songId,
@@ -319,7 +318,7 @@ export class SongsService {
           id: favoritePlaylist.id,
         },
         data: {
-          songs: {
+          songs_to_playlists: {
             deleteMany: {
               song_id: songId,
             },
@@ -373,7 +372,6 @@ export class SongsService {
           name: 'desc',
         },
         include: {
-          image: IMAGE_QUERY,
           owner: USER_QUERY,
         },
         // take: nameItemsPerPage,
@@ -405,7 +403,6 @@ export class SongsService {
           author: 'desc',
         },
         include: {
-          image: IMAGE_QUERY,
           owner: USER_QUERY,
         },
         // take: authourItemsPerPage,
@@ -420,7 +417,7 @@ export class SongsService {
         page * itemsPerPage,
       );
 
-      return paginatedSongs;
+      return this.songsFromatter.formatMany(paginatedSongs);
     } catch (error) {
       console.log(error);
     }

@@ -5,7 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { SELECT_USER_QUERY, USER_QUERY } from 'src/queries';
+import {
+  SELECT_USER_CATEGORIES,
+  SELECT_USER_QUERY,
+  SELECT_USERS_TO_PLAYLISTS,
+  USER_QUERY,
+} from 'src/queries';
 import { updateUserDto } from './dto/update-user.dto';
 import { createUserDto } from './dto';
 import { DEFAULT_USER_IMAGE_URL, PASSWORD_RECOVERY_LINK } from 'src/constants';
@@ -156,7 +161,7 @@ export class UsersService {
 
       await this.mailService.sendMail({
         to: dto.email,
-        from: 'tema.illar@outlook.com',
+        from: 'tema.illar@mail.ru',
         subject: 'Password Recovery',
         html: `Your password recovery link: <a href="${PASSWORD_RECOVERY_LINK}/${link_id}">${PASSWORD_RECOVERY_LINK}/${link_id}</a>`,
       });

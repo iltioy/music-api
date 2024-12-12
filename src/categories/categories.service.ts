@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
-  IMAGE_QUERY,
   ORDERED_PLAYLISY_QUERY_SELECT,
   ORDERED_SONG_QUERY_SELECT,
   USER_QUERY,
@@ -23,7 +22,7 @@ export class CategoriesService {
         id: categoryId,
       },
       include: {
-        playlists: {
+        playlists_to_categories: {
           orderBy: {
             order: 'asc',
           },
@@ -40,7 +39,7 @@ export class CategoriesService {
   async getAllCategories() {
     const categories = await this.prisma.category.findMany({
       include: {
-        playlists: {
+        playlists_to_categories: {
           orderBy: {
             order: 'asc',
           },
@@ -49,12 +48,13 @@ export class CategoriesService {
             playlist: {
               include: {
                 owner: USER_QUERY,
-                image: IMAGE_QUERY,
-                songs: {
+                songs_to_playlists: {
                   orderBy: {
                     order: 'desc',
                   },
-                  select: ORDERED_SONG_QUERY_SELECT,
+                  include: {
+                    song: true,
+                  },
                 },
               },
             },
@@ -96,11 +96,21 @@ export class CategoriesService {
         name: dto.name,
       },
       include: {
-        playlists: {
+        playlists_to_categories: {
           orderBy: {
             order: 'asc',
           },
-          select: ORDERED_PLAYLISY_QUERY_SELECT,
+          include: {
+            playlist: {
+              include: {
+                songs_to_playlists: {
+                  include: {
+                    song: true,
+                  },
+                },
+              },
+            },
+          },
         },
       },
     });
@@ -118,7 +128,7 @@ export class CategoriesService {
 
     let isInCategory = false;
 
-    category.playlists.forEach((playlist) => {
+    category.playlists_to_categories.forEach((playlist) => {
       if (playlist.playlist_id === playlistId) {
         isInCategory = true;
       }
@@ -131,19 +141,21 @@ export class CategoriesService {
         id: categoryId,
       },
       data: {
-        playlists: {
+        playlists_to_categories: {
           create: {
-            order: category.playlists.length + 1,
+            order: category.playlists_to_categories.length + 1,
             playlist_id: playlistId,
           },
         },
       },
       include: {
-        playlists: {
+        playlists_to_categories: {
           orderBy: {
             order: 'asc',
           },
-          select: ORDERED_PLAYLISY_QUERY_SELECT,
+          include: {
+            playlist: true,
+          },
         },
       },
     });
@@ -165,14 +177,14 @@ export class CategoriesService {
         id: categoryId,
       },
       data: {
-        playlists: {
+        playlists_to_categories: {
           deleteMany: {
             playlist_id: playlistId,
           },
         },
       },
       include: {
-        playlists: {
+        playlists_to_categories: {
           orderBy: {
             order: 'asc',
           },
@@ -204,7 +216,11 @@ export class CategoriesService {
         id: categoryId,
       },
       include: {
-        playlists: true,
+        playlists_to_categories: {
+          include: {
+            playlist: true,
+          },
+        },
       },
     });
 

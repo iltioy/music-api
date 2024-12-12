@@ -11,38 +11,21 @@ import {
   DEFAULT_PLAYLISY_IMAGE_URL,
   FAVORITE_PLAYLIST_ICON_URL,
 } from 'src/constants';
-import {
-  IMAGE_QUERY,
-  ORDERED_SONG_QUERY_SELECT,
-  SELECT_USER_QUERY,
-  USER_QUERY,
-} from 'src/queries';
+import { SELECT_USER_QUERY, USER_QUERY } from 'src/queries';
 import { reorderPlaylistDto } from './dto/reorder-playlist';
+import { PlaylistsFormatter } from './playlists.formatter';
 
 @Injectable()
 export class PlaylistsService {
-  constructor(private prisma: PrismaService) {}
-
-  private defaultImage = {
-    image_key: null,
-    image_url: DEFAULT_PLAYLISY_IMAGE_URL,
-  };
+  constructor(
+    private prisma: PrismaService,
+    private playlistsFormatter: PlaylistsFormatter,
+  ) {}
 
   async getPlaylist(playlistId: number) {
     const playlist = await this.prisma.playlist.findUnique({
       where: {
         id: playlistId,
-      },
-      include: {
-        owner: USER_QUERY,
-        songs_to_playlists: {
-          include: {
-            song: true,
-          },
-          orderBy: {
-            order: 'desc',
-          },
-        },
       },
     });
 
@@ -50,7 +33,7 @@ export class PlaylistsService {
       throw new NotFoundException();
     }
 
-    return playlist;
+    return this.playlistsFormatter.format(playlist);
   }
 
   async getAddedPlaylists(userId: number) {
@@ -67,7 +50,7 @@ export class PlaylistsService {
     return playlists;
   }
 
-  async getFavoritePlaylists(userId: number) {
+  async getLikedPlaylists(userId: number) {
     const playlists = await this.prisma.users_to_playlists.findMany({
       where: {
         user_id: userId,
@@ -84,41 +67,7 @@ export class PlaylistsService {
   async getPlaylistsByUsername(username: string) {
     const user = await this.prisma.user.findUnique({
       where: {
-        username: username,
-      },
-      include: {
-        liked_playlists: {
-          include: {
-            playlist: {
-              include: {
-                owner: USER_QUERY,
-                image: IMAGE_QUERY,
-                songs: {
-                  orderBy: {
-                    order: 'desc',
-                  },
-                  select: ORDERED_SONG_QUERY_SELECT,
-                },
-              },
-            },
-          },
-        },
-        added_playlists: {
-          include: {
-            playlist: {
-              include: {
-                owner: USER_QUERY,
-                image: IMAGE_QUERY,
-                songs: {
-                  orderBy: {
-                    order: 'desc',
-                  },
-                  select: ORDERED_SONG_QUERY_SELECT,
-                },
-              },
-            },
-          },
-        },
+        username,
       },
     });
 
@@ -126,73 +75,58 @@ export class PlaylistsService {
       throw new NotFoundException('User not found');
     }
 
-    const { liked_playlists, added_playlists } = user;
-    return { liked_playlists, added_playlists };
+    const added_playlists_records = await this.getAddedPlaylists(user.id);
+    const added_playlits = added_playlists_records.map(
+      (record) => record.playlist,
+    );
+
+    const liked_playlists_records = await this.getLikedPlaylists(user.id);
+    const liked_playlists = liked_playlists_records.map(
+      (record) => record.playlist,
+    );
+
+    const formatted_added_playlists = await this.playlistsFormatter.formatMany(
+      added_playlits,
+      user.id,
+    );
+    const formatted_liked_playlists = await this.playlistsFormatter.formatMany(
+      liked_playlists,
+      user.id,
+    );
+
+    return {
+      liked_playlists: formatted_liked_playlists,
+      added_playlists: formatted_added_playlists,
+    };
   }
 
-  async createPlaylist(
-    userId: number,
-    dto: createPlaylistDto,
-    isFavorite?: boolean,
-  ) {
-    let playlistImage = this.defaultImage;
+  async createPlaylist(userId: number, dto: createPlaylistDto) {
+    let playlistImage = DEFAULT_PLAYLISY_IMAGE_URL;
 
-    if (dto.image_key || dto.image_url) {
-      playlistImage = {
-        image_key: dto.image_key,
-        image_url: dto.image_url,
-      };
+    if (dto.image_url) {
+      playlistImage = dto.image_url;
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
-      include: {
-        added_playlists: {
-          include: {
-            playlist: true,
-          },
-        },
-      },
-    });
+    const added_playlists = await this.getAddedPlaylists(userId);
 
     const playlist = await this.prisma.playlist.create({
       data: {
-        name: `Плейлист #${user.added_playlists.length + 1}`,
-        image: {
-          create: playlistImage,
-        },
+        name: `Плейлист #${added_playlists.length + 1}`,
+        image_url: playlistImage,
         owner_id: userId,
-        is_favorite: isFavorite,
-      },
-      include: {
-        owner: USER_QUERY,
-        image: IMAGE_QUERY,
-        songs: {
-          include: {
-            song: true,
-          },
-        },
       },
     });
 
     let maxOrder = 0;
-    user.added_playlists.forEach((el) => {
+    added_playlists.forEach((el) => {
       maxOrder = Math.max(maxOrder, el.order);
     });
 
-    await this.prisma.user.update({
-      where: {
-        id: userId,
-      },
+    await this.prisma.users_to_playlists.create({
       data: {
-        added_playlists: {
-          create: {
-            order: maxOrder + 1,
-            playlist_id: playlist.id,
-          },
-        },
+        user_id: userId,
+        playlist_id: playlist.id,
+        order: maxOrder + 1,
       },
     });
 
@@ -200,7 +134,7 @@ export class PlaylistsService {
       throw new BadRequestException('Could not create a playlist!');
     }
 
-    return playlist;
+    return this.playlistsFormatter.format(playlist, userId);
   }
 
   async updatePlaylist(
@@ -212,13 +146,10 @@ export class PlaylistsService {
 
     this.checkAccess(userId, playlist.owner_id);
 
-    let playlistImage = playlist.image;
+    let playlistImage = playlist.image_url;
 
     if (dto.image_key) {
-      playlistImage = {
-        image_key: dto.image_key,
-        image_url: dto.image_url,
-      };
+      playlistImage = dto.image_url;
     }
 
     const updatedPlaylist = await this.prisma.playlist.update({
@@ -227,25 +158,11 @@ export class PlaylistsService {
       },
       data: {
         name: dto.name,
-        image: {
-          update: {
-            data: playlistImage,
-          },
-        },
-      },
-      include: {
-        image: IMAGE_QUERY,
-        songs: {
-          orderBy: {
-            order: 'desc',
-          },
-          select: ORDERED_SONG_QUERY_SELECT,
-        },
-        owner: USER_QUERY,
+        image_url: playlistImage,
       },
     });
 
-    return updatedPlaylist;
+    return this.playlistsFormatter.format(updatedPlaylist, userId);
   }
 
   async addSongToPlaylist(userId: number, playlistId: number, songId: number) {
@@ -285,19 +202,9 @@ export class PlaylistsService {
           },
         },
       },
-      include: {
-        songs_to_playlists: {
-          orderBy: {
-            order: 'desc',
-          },
-          include: {
-            song: true,
-          },
-        },
-      },
     });
 
-    return updatedPlatlist;
+    return this.playlistsFormatter.format(updatedPlatlist, userId);
   }
 
   async reorderPlaylist(
@@ -313,7 +220,7 @@ export class PlaylistsService {
 
     const promises = dto.songs.map(async (song, index) => {
       if (!song || !song.id) return;
-      await this.prisma.orderedSong.updateMany({
+      await this.prisma.songs_to_playlists.updateMany({
         data: {
           order: highestOrder - index,
         },
@@ -335,7 +242,7 @@ export class PlaylistsService {
         id: userId,
       },
       include: {
-        liked_playlists: {
+        users_to_playlists: {
           include: {
             playlist: true,
           },
@@ -348,7 +255,7 @@ export class PlaylistsService {
     let isPlaylistAlreadyLiked = false;
     let maxOrder = 0;
 
-    user.liked_playlists.forEach((el) => {
+    user.users_to_playlists.forEach((el) => {
       maxOrder = Math.max(maxOrder, el.order);
       if (el.playlist && el.playlist.id === playlistId) {
         isPlaylistAlreadyLiked = true;
@@ -362,7 +269,7 @@ export class PlaylistsService {
           id: userId,
         },
         data: {
-          liked_playlists: {
+          users_to_playlists: {
             create: {
               order: maxOrder + 1,
               playlist_id: playlistId,
@@ -377,7 +284,7 @@ export class PlaylistsService {
           id: userId,
         },
         data: {
-          liked_playlists: {
+          users_to_playlists: {
             deleteMany: {
               playlist_id: playlistId,
             },
@@ -428,9 +335,6 @@ export class PlaylistsService {
         image_url: FAVORITE_PLAYLIST_ICON_URL,
         owner_id: userId,
       },
-      include: {
-        owner: USER_QUERY,
-      },
     });
 
     await this.prisma.users_to_playlists.create({
@@ -442,7 +346,7 @@ export class PlaylistsService {
       },
     });
 
-    return iLikePlaylist;
+    return this.playlistsFormatter.format(iLikePlaylist, userId);
   }
 
   async removeSongFromPlaylist(
@@ -465,19 +369,9 @@ export class PlaylistsService {
           },
         },
       },
-      include: {
-        songs_to_playlists: {
-          orderBy: {
-            order: 'desc',
-          },
-          include: {
-            song: true,
-          },
-        },
-      },
     });
 
-    return updatedPlaylist;
+    return this.playlistsFormatter.format(updatedPlaylist, userId);
   }
 
   async deletePlaylist(userId: number, playlistId: number) {
