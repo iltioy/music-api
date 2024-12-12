@@ -6,16 +6,19 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
-  IMAGE_QUERY,
   ORDERED_PLAYLISY_QUERY_SELECT,
   ORDERED_SONG_QUERY_SELECT,
   USER_QUERY,
 } from 'src/queries';
 import { createCategoryDto, updateCategoryDto } from './dto';
+import { CategoriesFormatter } from './categories.formatter';
 
 @Injectable()
 export class CategoriesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private categoriesFormatter: CategoriesFormatter,
+  ) {}
 
   async getCategory(categoryId: number) {
     const category = await this.prisma.category.findUnique({
@@ -23,7 +26,7 @@ export class CategoriesService {
         id: categoryId,
       },
       include: {
-        playlists: {
+        playlists_to_categories: {
           orderBy: {
             order: 'asc',
           },
@@ -34,35 +37,12 @@ export class CategoriesService {
 
     if (!category) throw new NotFoundException();
 
-    return category;
+    return this.categoriesFormatter.format(category);
   }
 
   async getAllCategories() {
-    const categories = await this.prisma.category.findMany({
-      include: {
-        playlists: {
-          orderBy: {
-            order: 'asc',
-          },
-          select: {
-            order: true,
-            playlist: {
-              include: {
-                owner: USER_QUERY,
-                image: IMAGE_QUERY,
-                songs: {
-                  orderBy: {
-                    order: 'desc',
-                  },
-                  select: ORDERED_SONG_QUERY_SELECT,
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-    return categories;
+    const categories = await this.prisma.category.findMany({});
+    return this.categoriesFormatter.formatMany(categories);
   }
 
   async createCategory(userId: number, dto: createCategoryDto) {
@@ -76,7 +56,7 @@ export class CategoriesService {
 
     if (!category) throw new BadRequestException();
 
-    return category;
+    return this.categoriesFormatter.format(category);
   }
 
   async updateCategory(
@@ -95,17 +75,9 @@ export class CategoriesService {
       data: {
         name: dto.name,
       },
-      include: {
-        playlists: {
-          orderBy: {
-            order: 'asc',
-          },
-          select: ORDERED_PLAYLISY_QUERY_SELECT,
-        },
-      },
     });
 
-    return updatedCategory;
+    return this.categoriesFormatter.format(updatedCategory);
   }
 
   async addPlaylistToCategory(
@@ -118,7 +90,7 @@ export class CategoriesService {
 
     let isInCategory = false;
 
-    category.playlists.forEach((playlist) => {
+    category.playlists_to_categories.forEach((playlist) => {
       if (playlist.playlist_id === playlistId) {
         isInCategory = true;
       }
@@ -131,24 +103,16 @@ export class CategoriesService {
         id: categoryId,
       },
       data: {
-        playlists: {
+        playlists_to_categories: {
           create: {
-            order: category.playlists.length + 1,
+            order: category.playlists_to_categories.length + 1,
             playlist_id: playlistId,
           },
         },
       },
-      include: {
-        playlists: {
-          orderBy: {
-            order: 'asc',
-          },
-          select: ORDERED_PLAYLISY_QUERY_SELECT,
-        },
-      },
     });
 
-    return updatedCategory;
+    return this.categoriesFormatter.format(updatedCategory);
   }
 
   async removePlaylistFromCategory(
@@ -165,23 +129,15 @@ export class CategoriesService {
         id: categoryId,
       },
       data: {
-        playlists: {
+        playlists_to_categories: {
           deleteMany: {
             playlist_id: playlistId,
           },
         },
       },
-      include: {
-        playlists: {
-          orderBy: {
-            order: 'asc',
-          },
-          select: ORDERED_PLAYLISY_QUERY_SELECT,
-        },
-      },
     });
 
-    return updatedCategory;
+    return this.categoriesFormatter.format(updatedCategory);
   }
 
   async deleteCategory(userId: number, categoryId: number) {
@@ -204,7 +160,11 @@ export class CategoriesService {
         id: categoryId,
       },
       include: {
-        playlists: true,
+        playlists_to_categories: {
+          include: {
+            playlist: true,
+          },
+        },
       },
     });
 

@@ -6,20 +6,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import {
-  IMAGE_QUERY,
-  ORDERED_PLAYLISY_QUERY_SELECT,
-  ORDERED_SONG_QUERY_SELECT,
-  SELECT_ME_USER_QUERY,
+  SELECT_USER_CATEGORIES,
   SELECT_USER_QUERY,
+  SELECT_USERS_TO_PLAYLISTS,
   USER_QUERY,
 } from 'src/queries';
 import { updateUserDto } from './dto/update-user.dto';
 import { createUserDto } from './dto';
-import {
-  DEFAULT_USER_IMAGE_URL,
-  FAVORITE_PLAYLIST_ICON_URL,
-  PASSWORD_RECOVERY_LINK,
-} from 'src/constants';
+import { DEFAULT_USER_IMAGE_URL, PASSWORD_RECOVERY_LINK } from 'src/constants';
 import { MailerService } from '@nestjs-modules/mailer';
 import { v4 as uuid } from 'uuid';
 import {
@@ -28,6 +22,7 @@ import {
 } from './dto/restore-password.dto';
 import * as argon from 'argon2';
 import { PlaylistsService } from 'src/playlists/playlists.service';
+import { UsersFormatter } from './users.formatter';
 
 @Injectable()
 export class UsersService {
@@ -35,6 +30,7 @@ export class UsersService {
     private prisma: PrismaService,
     private mailService: MailerService,
     private playlistsService: PlaylistsService,
+    private usersFormatter: UsersFormatter,
   ) {}
 
   async createUser(dto: createUserDto) {
@@ -56,14 +52,8 @@ export class UsersService {
           email: dto.email,
           hash: dto.hash,
           username: `User${maxUserId + 1}`,
-          image: {
-            create: {
-              image_key: null,
-              image_url: DEFAULT_USER_IMAGE_URL,
-            },
-          },
+          image_url: DEFAULT_USER_IMAGE_URL,
         },
-        select: SELECT_USER_QUERY,
       });
 
       this.playlistsService.createFavoritePlaylist(user.id);
@@ -72,12 +62,11 @@ export class UsersService {
         where: {
           id: user.id,
         },
-        select: SELECT_USER_QUERY,
       });
 
       console.log(updatedUser);
 
-      return updatedUser;
+      return this.usersFormatter.format(updatedUser);
     } catch (error) {
       throw error;
     }
@@ -88,48 +77,13 @@ export class UsersService {
       where: {
         username,
       },
-      select: {
-        id: true,
-        role: true,
-        username: true,
-        email: true,
-        image: IMAGE_QUERY,
-        added_playlists: {
-          select: {
-            order: true,
-            playlist: {
-              include: {
-                image: IMAGE_QUERY,
-                owner: USER_QUERY,
-                songs: {
-                  orderBy: {
-                    order: 'desc',
-                  },
-                  select: ORDERED_SONG_QUERY_SELECT,
-                },
-              },
-            },
-          },
-        },
-        liked_playlists: {
-          select: ORDERED_PLAYLISY_QUERY_SELECT,
-        },
-        categories: {
-          select: {
-            playlists: {
-              select: ORDERED_PLAYLISY_QUERY_SELECT,
-            },
-            name: true,
-          },
-        },
-      },
     });
 
     if (!user) {
       throw new NotFoundException();
     }
 
-    return user;
+    return this.usersFormatter.format(user);
   }
 
   async updateUser(userId: number, dto: updateUserDto) {
@@ -140,23 +94,15 @@ export class UsersService {
         },
         data: {
           username: dto.username,
-          image: {
-            update: {
-              data: {
-                image_key: dto.image_key,
-                image_url: dto.image_url,
-              },
-            },
-          },
+          image_url: dto.image_url,
         },
-        select: SELECT_USER_QUERY,
       });
 
       if (!updateUserDto) {
         throw new BadRequestException();
       }
 
-      return updatedUser;
+      return this.usersFormatter.format(updatedUser);
     } catch (error) {
       if (error.code === 'P2002') {
         throw new ForbiddenException('This username is already taken!');
@@ -189,7 +135,7 @@ export class UsersService {
 
       await this.mailService.sendMail({
         to: dto.email,
-        from: 'tema.illar@outlook.com',
+        from: 'tema.illar@mail.ru',
         subject: 'Password Recovery',
         html: `Your password recovery link: <a href="${PASSWORD_RECOVERY_LINK}/${link_id}">${PASSWORD_RECOVERY_LINK}/${link_id}</a>`,
       });
@@ -219,35 +165,40 @@ export class UsersService {
         id: userId,
       },
       include: {
-        added_playlists: true,
+        users_to_playlists: true,
       },
     });
 
     let isInCollection = false;
-    user.added_playlists.map((playlist) =>
+    user.users_to_playlists.map((playlist) =>
       playlist.playlist_id === playlistId
         ? (isInCollection = true)
         : (isInCollection = false),
     );
 
-    if (isInCollection) throw new BadRequestException();
+    if (isInCollection) {
+      throw new BadRequestException('Playlist is already added');
+    }
+
+    const addedPlaylists = await this.playlistsService.getAddedPlaylists(
+      userId,
+    );
 
     const updatedUser = await this.prisma.user.update({
       where: {
         id: userId,
       },
       data: {
-        added_playlists: {
+        users_to_playlists: {
           create: {
-            order: user.added_playlists.length + 1,
+            order: addedPlaylists.length + 1,
             playlist_id: playlistId,
           },
         },
       },
-      select: SELECT_USER_QUERY,
     });
 
-    return updatedUser;
+    return this.usersFormatter.format(updatedUser);
   }
 
   async removePlaylistFromUserCollection(userId: number, playlistId: number) {
@@ -258,16 +209,15 @@ export class UsersService {
         id: userId,
       },
       data: {
-        added_playlists: {
+        users_to_playlists: {
           deleteMany: {
             playlist_id: playlistId,
           },
         },
       },
-      select: SELECT_USER_QUERY,
     });
 
-    return updatedUser;
+    return this.usersFormatter.format(updatedUser);
   }
 
   async restorePassword(recovery_link_id: string, dto: restorePasswordDto) {

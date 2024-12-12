@@ -13,7 +13,6 @@ import { ChartModule } from './chart/chart.module';
 import { CategoriesModule } from './categories/categories.module';
 import { MailerModule } from '@nestjs-modules/mailer';
 
-
 @Module({
   imports: [
     AuthModule,
@@ -30,13 +29,13 @@ import { MailerModule } from '@nestjs-modules/mailer';
     CategoriesModule,
     MailerModule.forRoot({
       transport: {
-        service: "hotmail",
+        host: 'smtp.mail.ru',
         auth: {
-            user: "tema.illar@outlook.com",
-            pass: process.env.EMAIL_PASSWORD
-        }
-      }
-    })
+          user: 'tema.illar@mail.ru',
+          pass: process.env.EMAIL_PASSWORD,
+        },
+      },
+    }),
   ],
   controllers: [AppController],
   providers: [AppService],

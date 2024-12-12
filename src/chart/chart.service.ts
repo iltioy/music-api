@@ -34,7 +34,7 @@ export class ChartService {
         chart_page: chartName,
       },
       include: {
-        categories: {
+        categories_to_charts: {
           orderBy: {
             order: 'asc',
           },
@@ -61,7 +61,7 @@ export class ChartService {
         chart_page: dto.name,
       },
       include: {
-        categories: {
+        categories_to_charts: {
           orderBy: {
             order: 'asc',
           },
@@ -83,7 +83,7 @@ export class ChartService {
         chart_page: chartName,
       },
       include: {
-        categories: true,
+        categories_to_charts: true,
       },
     });
 
@@ -96,7 +96,7 @@ export class ChartService {
     if (!category) throw new NotFoundException();
 
     let isInChart = false;
-    chart.categories.map((category) =>
+    chart.categories_to_charts.map((category) =>
       category.category_id === categoryId
         ? (isInChart = true)
         : (isInChart = false),
@@ -109,15 +109,15 @@ export class ChartService {
         chart_page: chartName,
       },
       data: {
-        categories: {
+        categories_to_charts: {
           create: {
-            order: chart.categories.length + 1,
+            order: chart.categories_to_charts.length + 1,
             category_id: categoryId,
           },
         },
       },
       include: {
-        categories: {
+        categories_to_charts: {
           orderBy: {
             order: 'asc',
           },
@@ -175,14 +175,14 @@ export class ChartService {
         chart_page: chartName,
       },
       data: {
-        categories: {
+        categories_to_charts: {
           deleteMany: {
             category_id: categoryId,
           },
         },
       },
       include: {
-        categories: {
+        categories_to_charts: {
           orderBy: {
             order: 'asc',
           },

@@ -7,10 +7,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     super({
       datasources: {
         db: {
-          url: process.env.DATABASE_URL
-        }
-      }
-    })
+          url: process.env.DATABASE_URL,
+        },
+      },
+    });
   }
 
   async onModuleInit() {
@@ -23,11 +23,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       this.song.deleteMany(),
       this.playlist.deleteMany(),
       this.category.deleteMany(),
-      this.image.deleteMany(),
-      this.orderedCategory.deleteMany(),
-      this.orderedPlaylist.deleteMany(),
-      this.orderedSong.deleteMany(),
-      this.chart.deleteMany()
-    ])
+      this.songs_to_playlists.deleteMany(),
+      this.playlists_to_categories.deleteMany(),
+      this.users_to_playlists.deleteMany(),
+      this.chart.deleteMany(),
+    ]);
   }
 }
