@@ -32,7 +32,7 @@ import { MailerModule } from '@nestjs-modules/mailer';
         host: 'smtp.mail.ru',
         auth: {
           user: 'tema.illar@mail.ru',
-          pass: 'urSvpqxD4RWzsTfhY7Up',
+          pass: process.env.EMAIL_PASSWORD,
         },
       },
     }),
