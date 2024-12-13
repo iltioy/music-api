@@ -96,6 +96,16 @@ export class CategoriesService {
       }
     });
 
+    const playlist = await this.prisma.playlist.findMany({
+      where: {
+        id: playlistId,
+      },
+    });
+
+    if (playlist.length === 0) {
+      throw new NotFoundException('Playlist was not found!');
+    }
+
     if (isInCategory) throw new BadRequestException();
 
     const updatedCategory = await this.prisma.category.update({
