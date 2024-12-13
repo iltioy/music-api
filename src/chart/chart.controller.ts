@@ -10,7 +10,7 @@ import {
   ParseIntPipe,
   Body,
 } from '@nestjs/common';
-import { createChartDto } from './dto';
+import { createChartDto, reorderChartCategoriesDto } from './dto';
 import {
   AuthGuard,
   RoleGuard,
@@ -52,6 +52,14 @@ export class ChartController {
     @Param('categoryId', ParseIntPipe) categoryId: number,
   ) {
     return this.chartService.addCategoryToChart(chartName, categoryId);
+  }
+
+  @Patch(':chartName/categories/reorder')
+  reorderCategories(
+    @Param('chartName') chartName: string,
+    @Body() dto: reorderChartCategoriesDto,
+  ) {
+    return this.chartService.reorderCategories(chartName, dto);
   }
 
   @Delete(':chartName/category/remove/:categoryId')

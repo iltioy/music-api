@@ -3,13 +3,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { createChartDto } from './dto';
+import { createChartDto, reorderChartCategoriesDto } from './dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { updateChartDto } from './dto/update-chart.dto';
+import { Category } from '@prisma/client';
+import { FormattedCategory } from 'src/categories/types';
+import { ChartFormatter } from './chart.formatter';
 
 @Injectable()
 export class ChartService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private chartFormatter: ChartFormatter,
+  ) {}
 
   async createChart(dto: createChartDto) {
     try {
@@ -49,7 +55,7 @@ export class ChartService {
       throw new NotFoundException();
     }
 
-    return chart;
+    return this.chartFormatter.format(chart);
   }
 
   async updateChart(chartName: string, dto: updateChartDto) {
@@ -129,6 +135,34 @@ export class ChartService {
     });
 
     return updatedChart;
+  }
+
+  async reorderCategories(chartName: string, dto: reorderChartCategoriesDto) {
+    console.log(dto.categories);
+    const chart = await this.prisma.chart.findUnique({
+      where: {
+        chart_page: chartName,
+      },
+    });
+
+    let highestOrder = dto.categories.length;
+
+    const promises = dto.categories.map(async (category, index) => {
+      if (!category || !category.id) return;
+      await this.prisma.categories_to_charts.updateMany({
+        data: {
+          order: highestOrder - index,
+        },
+        where: {
+          chart_id: chart.id,
+          category_id: category.id,
+        },
+      });
+    });
+
+    await Promise.all(promises);
+
+    return { success: true };
   }
 
   async addTrendPlaylistToChart(chartName: string, playlistId: number) {
