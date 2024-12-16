@@ -154,7 +154,7 @@ export class PlaylistsService {
 
     let playlistImage = playlist.image_url;
 
-    if (dto.image_key) {
+    if (dto.image_url) {
       playlistImage = dto.image_url;
     }
 
