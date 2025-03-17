@@ -17,6 +17,7 @@ import { PlaylistsService } from './playlists.service';
 import { createPlaylistDto } from './dto/create-playlist.dto';
 import { updatePlaylistDto } from './dto';
 import { reorderPlaylistDto } from './dto/reorder-playlist';
+import { User } from '@prisma/client';
 
 @UseGuards(AuthGuard)
 @Controller('playlists')
@@ -37,11 +38,8 @@ export class PlaylistsController {
   }
   @HttpCode(HttpStatus.CREATED)
   @Post('create')
-  createPlaylist(
-    @GetUser('id') userId: number,
-    @Body() dto: createPlaylistDto,
-  ) {
-    return this.playlistService.createPlaylist(userId, dto);
+  createPlaylist(@GetUser() user: User, @Body() dto: createPlaylistDto) {
+    return this.playlistService.createPlaylist(user, dto);
   }
 
   @Patch(':playlistId/song/add/:songId')
@@ -61,7 +59,7 @@ export class PlaylistsController {
     return this.playlistService.handleTogglePlaylistLike(userId, playlistId);
   }
 
-  @Delete(':playlistId/song/remove/:songId')
+  @Patch(':playlistId/song/remove/:songId')
   removeSongFromPlaylist(
     @GetUser('id') userId: number,
     @Param('playlistId', ParseIntPipe) playlistId: number,

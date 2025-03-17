@@ -4,6 +4,7 @@ import {
   IsOptional,
   Length,
   IsInt,
+  IsBoolean,
 } from 'class-validator';
 
 export class createPlaylistDto {
@@ -19,4 +20,8 @@ export class createPlaylistDto {
   @IsString()
   @IsOptional()
   image_key?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  is_album?: boolean;
 }

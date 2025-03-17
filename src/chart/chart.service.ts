@@ -9,6 +9,7 @@ import { updateChartDto } from './dto/update-chart.dto';
 import { Category } from '@prisma/client';
 import { FormattedCategory } from 'src/categories/types';
 import { ChartFormatter } from './chart.formatter';
+import { DEFAULT_PLAYLISY_IMAGE_URL } from 'src/constants';
 
 @Injectable()
 export class ChartService {
@@ -19,9 +20,27 @@ export class ChartService {
 
   async createChart(dto: createChartDto) {
     try {
+      const category = await this.prisma.category.create({
+        data: {
+          name: 'Категория',
+        },
+      });
+
       const chart = await this.prisma.chart.create({
         data: {
           chart_page: dto.name,
+          trend_playlist: {
+            create: {
+              name: dto.name,
+              image_url: DEFAULT_PLAYLISY_IMAGE_URL,
+            },
+          },
+          categories_to_charts: {
+            create: {
+              order: 1,
+              category_id: category.id,
+            },
+          },
         },
       });
 
@@ -48,6 +67,7 @@ export class ChartService {
             category_id: true,
           },
         },
+        trend_playlist: true,
       },
     });
 

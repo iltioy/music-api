@@ -12,6 +12,7 @@ import {
 } from 'src/queries';
 import { createCategoryDto, updateCategoryDto } from './dto';
 import { CategoriesFormatter } from './categories.formatter';
+import { reorderCategoryDto } from './dto/reorder-category';
 
 @Injectable()
 export class CategoriesService {
@@ -148,6 +149,35 @@ export class CategoriesService {
     });
 
     return this.categoriesFormatter.format(updatedCategory);
+  }
+
+  async reorderCategory(
+    userId: number,
+    categoryId: number,
+    dto: reorderCategoryDto,
+  ) {
+    const playlist = await this.checkIfCategoryExists(categoryId);
+
+    await this.checkAccess(userId, playlist.owner_id);
+
+    let highestOrder = dto.playlists.length;
+
+    const promises = dto.playlists.map(async (playlist, index) => {
+      if (!playlist || !playlist.id) return;
+      await this.prisma.playlists_to_categories.updateMany({
+        data: {
+          order: highestOrder - index,
+        },
+        where: {
+          category_id: categoryId,
+          playlist_id: playlist.id,
+        },
+      });
+    });
+
+    await Promise.all(promises);
+
+    return { success: true };
   }
 
   async deleteCategory(userId: number, categoryId: number) {

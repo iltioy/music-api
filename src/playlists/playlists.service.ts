@@ -14,6 +14,7 @@ import {
 import { SELECT_USER_QUERY } from 'src/queries';
 import { reorderPlaylistDto } from './dto/reorder-playlist';
 import { PlaylistsFormatter } from './playlists.formatter';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class PlaylistsService {
@@ -106,20 +107,32 @@ export class PlaylistsService {
     };
   }
 
-  async createPlaylist(userId: number, dto: createPlaylistDto) {
+  async createPlaylist(user: User, dto: createPlaylistDto) {
     let playlistImage = DEFAULT_PLAYLISY_IMAGE_URL;
 
     if (dto.image_url) {
       playlistImage = dto.image_url;
     }
 
-    const added_playlists = await this.getAddedPlaylists(userId);
+    const allowed = ['admin', 'artist'];
+
+    if (dto.is_album && !allowed.includes(user.role)) {
+      throw new ForbiddenException('Пользователь не артист!');
+    }
+
+    const added_playlists = await this.getAddedPlaylists(user.id);
+    let name = `Плейлист #${added_playlists.length + 1}`;
+
+    if (dto.is_album) {
+      name = `Альбом`;
+    }
 
     const playlist = await this.prisma.playlist.create({
       data: {
-        name: `Плейлист #${added_playlists.length + 1}`,
+        name,
         image_url: playlistImage,
-        owner_id: userId,
+        owner_id: user.id,
+        is_album: dto.is_album,
       },
     });
 
@@ -130,7 +143,7 @@ export class PlaylistsService {
 
     await this.prisma.users_to_playlists.create({
       data: {
-        user_id: userId,
+        user_id: user.id,
         playlist_id: playlist.id,
         order: maxOrder + 1,
       },
@@ -140,7 +153,7 @@ export class PlaylistsService {
       throw new BadRequestException('Could not create a playlist!');
     }
 
-    return this.playlistsFormatter.format(playlist, userId);
+    return this.playlistsFormatter.format(playlist, user.id);
   }
 
   async updatePlaylist(
@@ -150,12 +163,26 @@ export class PlaylistsService {
   ) {
     const playlist = await this.checkIfPlaylistExists(playlistId);
 
-    this.checkAccess(userId, playlist.owner_id);
+    await this.checkAccess(userId, playlist.owner_id);
 
     let playlistImage = playlist.image_url;
 
     if (dto.image_url) {
       playlistImage = dto.image_url;
+    }
+
+    if (playlist.is_album) {
+      const sonsgs = playlist.songs_to_playlists.map((el) => el.song_id);
+      await this.prisma.song.updateMany({
+        where: {
+          id: {
+            in: sonsgs,
+          },
+        },
+        data: {
+          album: dto.name,
+        },
+      });
     }
 
     const updatedPlaylist = await this.prisma.playlist.update({
@@ -174,7 +201,7 @@ export class PlaylistsService {
   async addSongToPlaylist(userId: number, playlistId: number, songId: number) {
     const playlist = await this.checkIfPlaylistExists(playlistId);
 
-    this.checkAccess(userId, playlist.owner_id);
+    await this.checkAccess(userId, playlist.owner_id);
 
     let isInPlaylist = false;
     let maxOrder = 0;
@@ -221,7 +248,7 @@ export class PlaylistsService {
     console.log(dto.songs);
     const playlist = await this.checkIfPlaylistExists(playlistId);
 
-    this.checkAccess(userId, playlist.owner_id);
+    await this.checkAccess(userId, playlist.owner_id);
 
     let highestOrder = dto.songs.length;
 
@@ -359,7 +386,7 @@ export class PlaylistsService {
   ) {
     const playlist = await this.checkIfPlaylistExists(playlistId);
 
-    this.checkAccess(userId, playlist.owner_id);
+    await this.checkAccess(userId, playlist.owner_id);
 
     const updatedPlaylist = await this.prisma.playlist.update({
       where: {
@@ -380,7 +407,7 @@ export class PlaylistsService {
   async deletePlaylist(userId: number, playlistId: number) {
     const playlist = await this.checkIfPlaylistExists(playlistId);
 
-    this.checkAccess(userId, playlist.owner_id);
+    await this.checkAccess(userId, playlist.owner_id);
 
     const deletedPlaylist = await this.prisma.playlist.delete({
       where: {
@@ -410,7 +437,15 @@ export class PlaylistsService {
     return playlist;
   }
 
-  checkAccess(userId: number, ownerId: number) {
+  async checkAccess(userId: number, ownerId: number) {
+    const user = await this.prisma.user.findFirst({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (user.role === 'admin') return;
+
     if (userId !== ownerId) throw new ForbiddenException();
   }
 }

@@ -29,8 +29,8 @@ export class UsersController {
 
   @UseGuards(AuthGuard)
   @Get('get/me')
-  getMe(@GetUser('username') username: string) {
-    return this.userService.getUserByUsername(username);
+  getMe(@GetUser('id', ParseIntPipe) id: number) {
+    return this.userService.getUserById(id);
   }
 
   @UseGuards(AuthGuard)

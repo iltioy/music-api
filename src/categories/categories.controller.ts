@@ -14,6 +14,7 @@ import { AuthGuard } from 'src/auth/guard';
 import { createCategoryDto } from './dto/create-category.dto';
 import { updateCategoryDto } from './dto';
 import { CategoriesService } from './categories.service';
+import { reorderCategoryDto } from './dto/reorder-category';
 
 @Controller('categories')
 export class CategoriesController {
@@ -55,6 +56,16 @@ export class CategoriesController {
       categoryId,
       playlistId,
     );
+  }
+
+  @UseGuards(AuthGuard)
+  @Patch('reorder/:categoryId')
+  reorderCategory(
+    @GetUser('id') userId: number,
+    @Param('categoryId', ParseIntPipe) categoryId: number,
+    @Body() dto: reorderCategoryDto,
+  ) {
+    return this.categoriesService.reorderCategory(userId, categoryId, dto);
   }
 
   @UseGuards(AuthGuard)

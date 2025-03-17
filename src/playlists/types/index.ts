@@ -9,4 +9,5 @@ export interface FormattedPlaylist {
   songs: FormattedSong[];
   is_favorite: boolean;
   is_liked: boolean;
+  is_album: boolean;
 }

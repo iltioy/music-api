@@ -24,6 +24,7 @@ model User {
 
   username      String  @unique
   email         String  @unique
+  nickname      String? @default("Псевдоним")
   hash          String
   refresh_token String?
   role          String  @default("user")
@@ -59,6 +60,7 @@ model Playlist {
   owner    User? @relation(fields: [owner_id], references: [id], onDelete: SetNull, name: "owned_playlists")
 
   image_url String
+  is_album Boolean @default(false)
 
   chart_name              String?                   @unique
   chart                   Chart?                    @relation(fields: [chart_name], references: [chart_page])

@@ -28,6 +28,7 @@ export class PlaylistsFormatter {
           },
         },
         name: true,
+        is_album: true,
         image_url: true,
         songs_to_playlists: {
           include: {
@@ -97,6 +98,7 @@ export class PlaylistsFormatter {
       is_favorite: isFavorite,
       is_liked: isLiked,
       songs: formattedSongs,
+      is_album: playlist.is_album,
     };
   }
 
