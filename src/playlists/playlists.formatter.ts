@@ -3,10 +3,14 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { FormattedPlaylist } from './types';
 import { FormattedSong } from 'src/songs/types';
 import { Playlist } from '@prisma/client';
+import { SongsFormatter } from 'src/songs/songs.formatted';
 
 @Injectable()
 export class PlaylistsFormatter {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private songsFormatter: SongsFormatter,
+  ) {}
 
   async format(
     playlistInput: Playlist,
@@ -18,15 +22,6 @@ export class PlaylistsFormatter {
       },
       select: {
         id: true,
-        owner: {
-          select: {
-            id: true,
-            username: true,
-            role: true,
-            image_url: true,
-            email: true,
-          },
-        },
         name: true,
         is_album: true,
         image_url: true,
@@ -38,6 +33,7 @@ export class PlaylistsFormatter {
                   select: {
                     id: true,
                     username: true,
+                    nickname: true,
                     role: true,
                     image_url: true,
                     email: true,
@@ -62,6 +58,18 @@ export class PlaylistsFormatter {
       },
     });
 
+    const ownerPl = await this.prisma.users_to_playlists.findFirst({
+      where: {
+        is_owned: true,
+        playlist_id: playlist.id,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    const owner = ownerPl?.user;
+
     let isFavorite = false;
     let isLiked = false;
 
@@ -70,30 +78,13 @@ export class PlaylistsFormatter {
       isLiked = playlist.users_to_playlists[0].is_liked;
     }
 
-    let formattedSongs = playlist.songs_to_playlists.map(
-      (record): FormattedSong => {
-        let song = record.song;
-
-        return {
-          id: song.id,
-          name: song.name,
-          author: song.author,
-          image_url: song.image_url,
-          owner: song.owner,
-          url: song.url,
-          album: song.album,
-          genre: song.genre,
-          language: song.language,
-          mood: song.mood,
-          order: record.order,
-        };
-      },
-    );
+    let songs = playlist.songs_to_playlists.map((el) => el.song);
+    let formattedSongs = await this.songsFormatter.formatMany(songs);
 
     return {
       id: playlist.id,
       name: playlist.name,
-      owner: playlist.owner,
+      owner: owner,
       image_url: playlist.image_url,
       is_favorite: isFavorite,
       is_liked: isLiked,

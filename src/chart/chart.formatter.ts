@@ -19,27 +19,27 @@ export class ChartFormatter {
         chart_page: chartInput.chart_page,
       },
       include: {
-        categories_to_charts: {
-          include: {
-            category: true,
-          },
-          orderBy: {
-            order: 'desc',
-          },
-        },
-        trend_playlist: true,
+        trend_palylist: true,
       },
     });
 
-    const formattedCategoriesPromises = chart.categories_to_charts.map((el) =>
-      this.categoriesFormatter.format(el.category),
+    const categories = await this.prisma.category.findMany({
+      where: {
+        chart_id: chart.id,
+      },
+      orderBy: {
+        order: 'desc',
+      },
+    });
+
+    const formattedCategories = await this.categoriesFormatter.formatMany(
+      categories,
     );
-    const formattedCategories = await Promise.all(formattedCategoriesPromises);
 
     let formattedPlaylist = null;
-    if (chart.trend_playlist) {
+    if (chart.trend_palylist) {
       formattedPlaylist = await this.playlistFormatter.format(
-        chart.trend_playlist,
+        chart.trend_palylist,
       );
     }
 

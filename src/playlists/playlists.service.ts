@@ -14,7 +14,7 @@ import {
 import { SELECT_USER_QUERY } from 'src/queries';
 import { reorderPlaylistDto } from './dto/reorder-playlist';
 import { PlaylistsFormatter } from './playlists.formatter';
-import { User } from '@prisma/client';
+import { Playlist, User } from '@prisma/client';
 
 @Injectable()
 export class PlaylistsService {
@@ -116,6 +116,8 @@ export class PlaylistsService {
 
     const allowed = ['admin', 'artist'];
 
+    console.log(user.role);
+
     if (dto.is_album && !allowed.includes(user.role)) {
       throw new ForbiddenException('Пользователь не артист!');
     }
@@ -131,7 +133,6 @@ export class PlaylistsService {
       data: {
         name,
         image_url: playlistImage,
-        owner_id: user.id,
         is_album: dto.is_album,
       },
     });
@@ -145,6 +146,7 @@ export class PlaylistsService {
       data: {
         user_id: user.id,
         playlist_id: playlist.id,
+        is_owned: true,
         order: maxOrder + 1,
       },
     });
@@ -163,26 +165,12 @@ export class PlaylistsService {
   ) {
     const playlist = await this.checkIfPlaylistExists(playlistId);
 
-    await this.checkAccess(userId, playlist.owner_id);
+    await this.checkAccess(userId, playlist);
 
     let playlistImage = playlist.image_url;
 
     if (dto.image_url) {
       playlistImage = dto.image_url;
-    }
-
-    if (playlist.is_album) {
-      const sonsgs = playlist.songs_to_playlists.map((el) => el.song_id);
-      await this.prisma.song.updateMany({
-        where: {
-          id: {
-            in: sonsgs,
-          },
-        },
-        data: {
-          album: dto.name,
-        },
-      });
     }
 
     const updatedPlaylist = await this.prisma.playlist.update({
@@ -201,7 +189,7 @@ export class PlaylistsService {
   async addSongToPlaylist(userId: number, playlistId: number, songId: number) {
     const playlist = await this.checkIfPlaylistExists(playlistId);
 
-    await this.checkAccess(userId, playlist.owner_id);
+    await this.checkAccess(userId, playlist);
 
     let isInPlaylist = false;
     let maxOrder = 0;
@@ -248,7 +236,7 @@ export class PlaylistsService {
     console.log(dto.songs);
     const playlist = await this.checkIfPlaylistExists(playlistId);
 
-    await this.checkAccess(userId, playlist.owner_id);
+    await this.checkAccess(userId, playlist);
 
     let highestOrder = dto.songs.length;
 
@@ -312,7 +300,6 @@ export class PlaylistsService {
             },
           },
         },
-        select: SELECT_USER_QUERY,
       });
     } else {
       updatedUser = await this.prisma.users_to_playlists.deleteMany({
@@ -363,7 +350,6 @@ export class PlaylistsService {
       data: {
         name: 'Мне нравится',
         image_url: FAVORITE_PLAYLIST_ICON_URL,
-        owner_id: userId,
       },
     });
 
@@ -372,6 +358,7 @@ export class PlaylistsService {
         user_id: userId,
         playlist_id: iLikePlaylist.id,
         order: -1,
+        is_owned: true,
         is_favorite: true,
       },
     });
@@ -386,7 +373,7 @@ export class PlaylistsService {
   ) {
     const playlist = await this.checkIfPlaylistExists(playlistId);
 
-    await this.checkAccess(userId, playlist.owner_id);
+    await this.checkAccess(userId, playlist);
 
     const updatedPlaylist = await this.prisma.playlist.update({
       where: {
@@ -407,7 +394,7 @@ export class PlaylistsService {
   async deletePlaylist(userId: number, playlistId: number) {
     const playlist = await this.checkIfPlaylistExists(playlistId);
 
-    await this.checkAccess(userId, playlist.owner_id);
+    await this.checkAccess(userId, playlist);
 
     const deletedPlaylist = await this.prisma.playlist.delete({
       where: {
@@ -437,15 +424,31 @@ export class PlaylistsService {
     return playlist;
   }
 
-  async checkAccess(userId: number, ownerId: number) {
+  async getPlaylistOwner(playlist: Playlist) {
+    const pl = await this.prisma.users_to_playlists.findFirst({
+      where: {
+        is_owned: true,
+        playlist_id: playlist.id,
+      },
+      include: {
+        user: true,
+      },
+    });
+
+    return pl?.user;
+  }
+
+  async checkAccess(userId: number, playlist: Playlist) {
     const user = await this.prisma.user.findFirst({
       where: {
         id: userId,
       },
     });
 
+    const owner = await this.getPlaylistOwner(playlist);
+
     if (user.role === 'admin') return;
 
-    if (userId !== ownerId) throw new ForbiddenException();
+    if (userId !== owner.id) throw new ForbiddenException();
   }
 }

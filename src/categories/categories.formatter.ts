@@ -17,15 +17,6 @@ export class CategoriesFormatter {
         id: categoryInput.id,
       },
       include: {
-        owner: {
-          select: {
-            id: true,
-            username: true,
-            role: true,
-            image_url: true,
-            email: true,
-          },
-        },
         playlists_to_categories: {
           include: {
             playlist: true,
@@ -45,7 +36,6 @@ export class CategoriesFormatter {
     return {
       id: category.id,
       name: category.name,
-      owner: category.owner,
       playlists: formattedPlaylists,
     };
   }
@@ -60,15 +50,6 @@ export class CategoriesFormatter {
         },
       },
       include: {
-        owner: {
-          select: {
-            id: true,
-            username: true,
-            role: true,
-            image_url: true,
-            email: true,
-          },
-        },
         playlists_to_categories: {
           include: {
             playlist: true,
@@ -77,6 +58,9 @@ export class CategoriesFormatter {
             order: 'desc',
           },
         },
+      },
+      orderBy: {
+        order: 'desc',
       },
     });
 
@@ -91,7 +75,6 @@ export class CategoriesFormatter {
       let formattedCategory: FormattedCategory = {
         id: category.id,
         name: category.name,
-        owner: category.owner,
         playlists: formattedPlaylists,
       };
 

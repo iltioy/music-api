@@ -20,28 +20,26 @@ model verificationCodeToEmail {
 }
 
 model User {
-  id Int @id @default(autoincrement())
+  id Int @id @default(autoincrement()) @map("id_пользователя")
 
-  username      String  @unique
-  email         String  @unique
-  nickname      String? @default("Псевдоним")
-  hash          String
+  username      String  @unique @map("имя")
+  nickname      String? @map("псевдоним")
+  role          String  @default("user") @map("роль")
+  email         String  @unique @map("email")
+  image_url String  @map("фотография")
+
+  hash          String  
   refresh_token String?
-  role          String  @default("user")
-  image_url String
-
   restore_password_link_id String?
 
   songs             Song[]
-  owned_playlists   Playlist[]               @relation("owned_playlists")
-  categories        Category[]
   blacklisted_songs Users_BlacklistedSongs[]
 
   createdAt DateTime @default(now())
 
   users_to_playlists users_to_playlists[]
 
-  @@map("users")
+  @@map("Пользователи")
 }
 
 model blacklisted_refresh_tokens {
@@ -52,23 +50,18 @@ model blacklisted_refresh_tokens {
 }
 
 model Playlist {
-  id Int @id @default(autoincrement())
+  id Int @id @default(autoincrement()) @map("id_плейлиста")
 
-  name String
+  name String @map("название")
+  image_url String @map("изображение")
+  is_album Boolean @default(false) @map("флаг_альбома")
 
-  owner_id Int?
-  owner    User? @relation(fields: [owner_id], references: [id], onDelete: SetNull, name: "owned_playlists")
-
-  image_url String
-  is_album Boolean @default(false)
-
-  chart_name              String?                   @unique
-  chart                   Chart?                    @relation(fields: [chart_name], references: [chart_page])
   users_to_playlists      users_to_playlists[]
   songs_to_playlists      songs_to_playlists[]
   playlists_to_categories playlists_to_categories[]
+  Chart Chart[]
 
-  @@map("playlists")
+  @@map("Плейлисты")
 }
 
 enum Genre {
@@ -90,26 +83,20 @@ enum Language {
 }
 
 model Song {
-  id Int @id @default(autoincrement())
+  id Int @id @default(autoincrement()) @map("id_трека")
 
-  name   String
-  url    String
-  author String
-  album  String?
-
-  genre    Genre?
-  mood     Mood?
-  language Language?
-
-  image_url String
-
-  owner_id Int?
+  owner_id Int? @map("id_автора")
   owner    User? @relation(fields: [owner_id], references: [id], onDelete: SetNull)
+
+  name   String @map("название")
+  url    String @map("аудио")
+
+  image_url String @map("изображение")
 
   blacklisted_by     Users_BlacklistedSongs[]
   songs_to_playlists songs_to_playlists[]
 
-  @@map("songs")
+  @@map("Треки")
 }
 
 model Users_BlacklistedSongs {
@@ -125,84 +112,74 @@ model Users_BlacklistedSongs {
 }
 
 model Category {
-  id   Int    @id @default(autoincrement())
-  name String
+  id   Int    @id @default(autoincrement()) @map("id_категории")
+  name String @map("название")
 
-  owner_id Int?
-  owner    User? @relation(fields: [owner_id], references: [id], onDelete: SetNull)
+  chart_id Int? @map("id_чарта")
+  chart Chart? @relation(fields: [chart_id], references: [id], onDelete: Cascade)
+
+  order Int @map("порядок")
 
   playlists_to_categories playlists_to_categories[]
-  categories_to_charts    categories_to_charts[]
 
-  @@map("categories")
+  @@map("Категории")
 }
 
 model Chart {
-  id Int @id @default(autoincrement())
+  id Int @id @default(autoincrement()) @map("id_чарта")
 
   chart_page String @unique
 
-  trend_playlist       Playlist?
-  categories_to_charts categories_to_charts[]
+  trend_playlist_id       Int?
+  trend_palylist Playlist? @relation(fields: [trend_playlist_id], references: [id], onDelete: SetNull)
 
-  @@map("charts")
+  Category Category[]
+
+  @@map("Чарты")
 }
 
 model users_to_playlists {
-  id Int @id @default(autoincrement())
+  id Int @id @default(autoincrement()) @map("id_пользователь_плейлист")
 
-  user_id Int
+  user_id Int @map("id_пользователя")
   user    User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  playlist_id Int
+  playlist_id Int @map("id_плейлиста")
   playlist    Playlist @relation(fields: [playlist_id], references: [id], onDelete: Cascade)
 
-  is_favorite Boolean @default(false)
-  is_liked Boolean @default(false)
+  is_liked Boolean @default(false) @map("флаг_лайка")
+  is_favorite Boolean @default(false) @map("флаг_любимого_плейлиста")
+  is_owned Boolean @default(false) @map("флаг_владения_плейлистом")
 
-  order Int
+  order Int @map("порядок")
 
-  @@map("users_to_paylists")
+  @@map("Пользователь_Плейлист")
 }
 
 model songs_to_playlists {
-  id Int @id @default(autoincrement())
+  id Int @id @default(autoincrement()) @map("id_плейлист_трек")
 
-  song_id Int
+  song_id Int @map("id_трека")
   song    Song @relation(fields: [song_id], references: [id], onDelete: Cascade)
 
-  playlist_id Int
+  playlist_id Int @map("id_плейлиста")
   playlist    Playlist @relation(fields: [playlist_id], references: [id], onDelete: Cascade)
 
-  order Int
+  order Int @map("порядок")
 
-  @@map("songs_to_playlists")
+  @@map("Плейлист_Трек")
 }
 
 model playlists_to_categories {
-  id Int @id @default(autoincrement())
+  id Int @id @default(autoincrement()) @map("id_категория_плейлист")
 
-  playlist_id Int
+  playlist_id Int @map("id_плейлиста")
   playlist    Playlist @relation(fields: [playlist_id], references: [id], onDelete: Cascade)
 
-  category_id Int
+  category_id Int @map("id_категории")
   category    Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
 
-  order Int
+  order Int @map("порядок")
 
-  @@map("playlists_to_categories")
-}
-
-model categories_to_charts {
-  id Int @id @default(autoincrement())
-
-  category_id Int
-  category    Category @relation(fields: [category_id], references: [id], onDelete: Cascade)
-
-  chart_id Int
-  chart    Chart @relation(fields: [chart_id], references: [id], onDelete: Cascade)
-
-  order Int
-
-  @@map("categories_to_charts")
+  @@map("Категория_Плейлист")
 }

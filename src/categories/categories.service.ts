@@ -31,7 +31,6 @@ export class CategoriesService {
           orderBy: {
             order: 'asc',
           },
-          select: ORDERED_PLAYLISY_QUERY_SELECT,
         },
       },
     });
@@ -51,7 +50,7 @@ export class CategoriesService {
     const category = await this.prisma.category.create({
       data: {
         name: dto.name,
-        owner_id: userId,
+        order: 1,
       },
     });
 
@@ -67,7 +66,7 @@ export class CategoriesService {
   ) {
     const category = await this.checkIfCategoryExists(categoryId);
 
-    await this.checkAccess(userId, category.owner_id);
+    await this.checkAccess(userId);
 
     const updatedCategory = await this.prisma.category.update({
       where: {
@@ -87,7 +86,7 @@ export class CategoriesService {
     playlistId: number,
   ) {
     const category = await this.checkIfCategoryExists(categoryId);
-    await this.checkAccess(userId, category.owner_id);
+    await this.checkAccess(userId);
 
     let isInCategory = false;
 
@@ -133,7 +132,7 @@ export class CategoriesService {
   ) {
     const category = await this.checkIfCategoryExists(categoryId);
 
-    await this.checkAccess(userId, category.owner_id);
+    await this.checkAccess(userId);
 
     const updatedCategory = await this.prisma.category.update({
       where: {
@@ -156,11 +155,16 @@ export class CategoriesService {
     categoryId: number,
     dto: reorderCategoryDto,
   ) {
-    const playlist = await this.checkIfCategoryExists(categoryId);
+    console.log('Пре');
+    await this.checkIfCategoryExists(categoryId);
+    console.log('Кол');
 
-    await this.checkAccess(userId, playlist.owner_id);
+    await this.checkAccess(userId);
+    console.log('Дес');
 
     let highestOrder = dto.playlists.length;
+
+    console.log({ playlists: dto.playlists });
 
     const promises = dto.playlists.map(async (playlist, index) => {
       if (!playlist || !playlist.id) return;
@@ -183,7 +187,7 @@ export class CategoriesService {
   async deleteCategory(userId: number, categoryId: number) {
     const category = await this.checkIfCategoryExists(categoryId);
 
-    await this.checkAccess(userId, category.owner_id);
+    await this.checkAccess(userId);
 
     const deletedCategory = await this.prisma.category.delete({
       where: {
@@ -213,14 +217,14 @@ export class CategoriesService {
     return category;
   }
 
-  async checkAccess(userId: number, ownerId: number) {
+  async checkAccess(userId: number) {
     const user = await this.prisma.user.findUnique({
       where: {
         id: userId,
       },
     });
 
-    if (userId === ownerId || user.role === 'admin') return;
+    if (user.role === 'admin') return;
     throw new ForbiddenException();
   }
 

@@ -17,25 +17,47 @@ export class SongsFormatter {
           select: {
             id: true,
             username: true,
+            nickname: true,
             role: true,
             image_url: true,
             email: true,
           },
         },
+        songs_to_playlists: {
+          where: {
+            song_id: songInput.id,
+            playlist: {
+              is_album: true,
+            },
+          },
+          include: {
+            playlist: {
+              include: {
+                users_to_playlists: {
+                  include: {
+                    user: true,
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     });
+
+    const playlist_record = song.songs_to_playlists[0];
 
     return {
       id: song.id,
       name: song.name,
-      author: song.author,
+      author: song.owner.nickname,
       image_url: song.image_url,
       owner: song.owner,
       url: song.url,
-      album: song.album,
-      genre: song.genre,
-      language: song.language,
-      mood: song.mood,
+      album: playlist_record ? playlist_record.playlist.name : '',
+      // genre: song.genre,
+      // language: song.language,
+      // mood: song.mood,
     };
   }
 
@@ -53,6 +75,7 @@ export class SongsFormatter {
           select: {
             id: true,
             username: true,
+            nickname: true,
             email: true,
             role: true,
             image_url: true,
@@ -65,14 +88,14 @@ export class SongsFormatter {
       return {
         id: song.id,
         name: song.name,
-        author: song.author,
+        author: song.owner.nickname,
         image_url: song.image_url,
         owner: song.owner,
         url: song.url,
-        album: song.album,
-        genre: song.genre,
-        language: song.language,
-        mood: song.mood,
+        // album: song.album,
+        // genre: song.genre,
+        // language: song.language,
+        // mood: song.mood,
       };
     });
 

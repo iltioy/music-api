@@ -55,10 +55,10 @@ export class SongsService {
   }
 
   async getSongForRadio(dto: getRadioSongDto, userId: number) {
-    const genre = dto.genres[Math.floor(Math.random() * dto.genres.length)];
-    const mood = dto.moods[Math.floor(Math.random() * dto.moods.length)];
-    const language =
-      dto.languages[Math.floor(Math.random() * dto.languages.length)];
+    // const genre = dto.genres[Math.floor(Math.random() * dto.genres.length)];
+    // const mood = dto.moods[Math.floor(Math.random() * dto.moods.length)];
+    // const language =
+    //   dto.languages[Math.floor(Math.random() * dto.languages.length)];
 
     let blacklistedSongs = await this.prisma.users_BlacklistedSongs.findMany({
       where: {
@@ -74,9 +74,9 @@ export class SongsService {
 
     let songs = await this.prisma.song.findMany({
       where: {
-        genre,
-        mood,
-        language,
+        // genre,
+        // mood,
+        // language,
         id: {
           notIn: blacklistedSongsIds,
         },
@@ -86,8 +86,8 @@ export class SongsService {
     if (songs.length === 0) {
       songs = await this.prisma.song.findMany({
         where: {
-          language,
-          genre,
+          // language,
+          // genre,
           id: {
             notIn: blacklistedSongsIds,
           },
@@ -119,10 +119,8 @@ export class SongsService {
 
     const song = await this.prisma.song.create({
       data: {
-        author: dto.author,
         image_url: songImage.image_url,
         name: dto.name,
-        album: dto.album,
         owner_id: userId,
         url: dto.url,
       },
@@ -158,8 +156,6 @@ export class SongsService {
         id: songId,
       },
       data: {
-        album: dto.album,
-        author: dto.author,
         image_url: songImage,
         name: dto.name,
       },
@@ -389,29 +385,29 @@ export class SongsService {
       //   authourItemsPerPage = 20
       // }
 
-      const songsByAuthor = await this.prisma.song.findMany({
-        where: {
-          author: {
-            contains: query,
-            mode: 'insensitive',
-          },
-          id: {
-            notIn: songByNameIds,
-          },
-        },
-        orderBy: {
-          author: 'desc',
-        },
-        include: {
-          owner: USER_QUERY,
-        },
-        // take: authourItemsPerPage,
-        // skip: (page - 1) * authourItemsPerPage
-      });
+      // const songsByAuthor = await this.prisma.song.findMany({
+      //   where: {
+      //     author: {
+      //       contains: query,
+      //       mode: 'insensitive',
+      //     },
+      //     id: {
+      //       notIn: songByNameIds,
+      //     },
+      //   },
+      //   orderBy: {
+      //     author: 'desc',
+      //   },
+      //   include: {
+      //     owner: USER_QUERY,
+      //   },
+      //   // take: authourItemsPerPage,
+      //   // skip: (page - 1) * authourItemsPerPage
+      // });
 
       const itemsPerPage = 5;
 
-      let allFoundSongs = [...songsByName, ...songsByAuthor];
+      let allFoundSongs = [...songsByName];
       let paginatedSongs = allFoundSongs.slice(
         (page - 1) * itemsPerPage,
         page * itemsPerPage,
