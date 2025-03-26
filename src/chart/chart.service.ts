@@ -18,46 +18,33 @@ export class ChartService {
     private chartFormatter: ChartFormatter,
   ) {}
 
-  async createChart(dto: createChartDto) {
-    try {
-      const chart = await this.prisma.chart.create({
+  async getChart(chartName: string) {
+    const chart = await this.prisma.category.findMany({
+      where: {
+        chart_type: chartName,
+      },
+    });
+
+    if (chart.length === 0) {
+      await this.prisma.category.create({
         data: {
-          chart_page: dto.name,
-          trend_palylist: {
+          name: 'Категория 1',
+          chart_type: chartName,
+          order: 1,
+          playlists_to_categories: {
             create: {
-              name: dto.name,
-              image_url: DEFAULT_PLAYLISY_IMAGE_URL,
+              playlist: {
+                create: {
+                  name: 'Плейлист 1',
+                  image_url: DEFAULT_PLAYLISY_IMAGE_URL,
+                },
+              },
+              order: 1,
             },
           },
         },
       });
-
-      await this.prisma.category.create({
-        data: {
-          name: 'Категория',
-          chart_id: chart.id,
-          order: 1,
-        },
-      });
-
-      return chart;
-    } catch (error) {
-      if (error.code === 'P2002') {
-        throw new BadRequestException('Chart name is already taken!');
-      }
-      throw error;
     }
-  }
-
-  async getChart(chartName: string) {
-    const chart = await this.prisma.chart.findUnique({
-      where: {
-        chart_page: chartName,
-      },
-      include: {
-        trend_palylist: true,
-      },
-    });
 
     if (!chart) {
       throw new NotFoundException();
@@ -67,12 +54,12 @@ export class ChartService {
   }
 
   async updateChart(chartName: string, dto: updateChartDto) {
-    const updatedChart = await this.prisma.chart.update({
+    const updatedChart = await this.prisma.category.updateMany({
       where: {
-        chart_page: chartName,
+        chart_type: chartName,
       },
       data: {
-        chart_page: dto.name,
+        chart_type: dto.name,
       },
     });
 
@@ -82,12 +69,6 @@ export class ChartService {
   }
 
   async addCategoryToChart(chartName: string, categoryId: number) {
-    const chart = await this.prisma.chart.findUnique({
-      where: {
-        chart_page: chartName,
-      },
-    });
-
     const category = await this.prisma.category.findUnique({
       where: {
         id: categoryId,
@@ -96,25 +77,25 @@ export class ChartService {
 
     if (!category) throw new NotFoundException();
 
-    if (category.chart_id === chart.id) throw new BadRequestException();
+    if (category.chart_type === chartName) throw new BadRequestException();
 
     await this.prisma.category.update({
       where: {
         id: category.id,
       },
       data: {
-        chart_id: chart.id,
+        chart_type: chartName,
       },
     });
 
-    return this.chartFormatter.format(chart);
+    return this.chartFormatter.format([category]);
   }
 
   async reorderCategories(chartName: string, dto: reorderChartCategoriesDto) {
     console.log(dto.categories);
-    const chart = await this.prisma.chart.findUnique({
+    const categories = await this.prisma.category.findMany({
       where: {
-        chart_page: chartName,
+        chart_type: chartName,
       },
     });
 
@@ -123,13 +104,12 @@ export class ChartService {
     const promises = dto.categories.map(async (category, index) => {
       if (!category || !category.id) return;
       console.log({ category });
-      console.log({ chart });
       await this.prisma.category.updateMany({
         data: {
           order: highestOrder - index,
         },
         where: {
-          chart_id: chart.id,
+          chart_type: chartName,
           id: category.id,
         },
       });
@@ -140,69 +120,28 @@ export class ChartService {
     return { success: true };
   }
 
-  async addTrendPlaylistToChart(chartName: string, playlistId: number) {
-    const playlist = await this.prisma.playlist.findUnique({
-      where: {
-        id: playlistId,
-      },
-    });
-
-    if (!playlist) throw new NotFoundException();
-
-    return this.prisma.chart.update({
-      where: {
-        chart_page: chartName,
-      },
-      data: {
-        trend_palylist: {
-          connect: {
-            id: playlistId,
-          },
-        },
-      },
-    });
-  }
-
-  async removeTrendPlaylistFromChart(chartName: string, playlistId: number) {
-    return this.prisma.chart.update({
-      where: {
-        chart_page: chartName,
-      },
-      data: {
-        trend_palylist: {
-          disconnect: {
-            id: playlistId,
-          },
-        },
-      },
-    });
-  }
-
   async removeCategoryFromChart(chartName: string, categoryId: number) {
-    const chart = await this.prisma.chart.findUnique({
-      where: {
-        chart_page: chartName,
-      },
-    });
-
-    await this.prisma.category.update({
+    const category = await this.prisma.category.update({
       where: {
         id: categoryId,
-        chart_id: chart.id,
+        chart_type: chartName,
       },
       data: {
-        chart_id: null,
+        chart_type: null,
       },
     });
 
-    return this.chartFormatter.format(chart);
+    return this.chartFormatter.format([category]);
   }
 
   async deleteChart(chartName: string) {
     try {
-      await this.prisma.chart.delete({
+      await this.prisma.category.updateMany({
         where: {
-          chart_page: chartName,
+          chart_type: chartName,
+        },
+        data: {
+          chart_type: null,
         },
       });
 

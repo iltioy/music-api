@@ -33,7 +33,6 @@ export class PlaylistsFormatter {
                   select: {
                     id: true,
                     username: true,
-                    nickname: true,
                     role: true,
                     image_url: true,
                     email: true,

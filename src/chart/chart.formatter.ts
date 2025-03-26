@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Chart } from '@prisma/client';
+import { Category } from '@prisma/client';
 import { CategoriesFormatter } from 'src/categories/categories.formatter';
 import { PlaylistsFormatter } from 'src/playlists/playlists.formatter';
 import { PrismaService } from 'src/prisma/prisma.service';
@@ -9,23 +9,17 @@ import { FormattedChart } from './types';
 export class ChartFormatter {
   constructor(
     private prisma: PrismaService,
-    private playlistFormatter: PlaylistsFormatter,
     private categoriesFormatter: CategoriesFormatter,
   ) {}
 
-  async format(chartInput: Chart): Promise<FormattedChart> {
-    const chart = await this.prisma.chart.findUnique({
-      where: {
-        chart_page: chartInput.chart_page,
-      },
-      include: {
-        trend_palylist: true,
-      },
-    });
+  async format(cata: Category[]): Promise<FormattedChart> {
+    const categoriesIds = cata.map((category) => category.id);
 
     const categories = await this.prisma.category.findMany({
       where: {
-        chart_id: chart.id,
+        id: {
+          in: categoriesIds,
+        },
       },
       orderBy: {
         order: 'desc',
@@ -36,17 +30,9 @@ export class ChartFormatter {
       categories,
     );
 
-    let formattedPlaylist = null;
-    if (chart.trend_palylist) {
-      formattedPlaylist = await this.playlistFormatter.format(
-        chart.trend_palylist,
-      );
-    }
-
     return {
-      name: chart.chart_page,
+      name: categories[0]?.chart_type,
       categories: formattedCategories,
-      playlist: formattedPlaylist,
     };
   }
 }

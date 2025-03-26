@@ -17,7 +17,6 @@ export class SongsFormatter {
           select: {
             id: true,
             username: true,
-            nickname: true,
             role: true,
             image_url: true,
             email: true,
@@ -50,7 +49,7 @@ export class SongsFormatter {
     return {
       id: song.id,
       name: song.name,
-      author: song.owner.nickname,
+      author: song.owner.username,
       image_url: song.image_url,
       owner: song.owner,
       url: song.url,
@@ -75,7 +74,6 @@ export class SongsFormatter {
           select: {
             id: true,
             username: true,
-            nickname: true,
             email: true,
             role: true,
             image_url: true,
@@ -88,7 +86,7 @@ export class SongsFormatter {
       return {
         id: song.id,
         name: song.name,
-        author: song.owner.nickname,
+        author: song.owner.username,
         image_url: song.image_url,
         owner: song.owner,
         url: song.url,

@@ -27,11 +27,6 @@ import { updateChartDto } from './dto/update-chart.dto';
 export class ChartController {
   constructor(private chartService: ChartService) {}
 
-  @Post('create')
-  createChart(@Body() dto: createChartDto) {
-    return this.chartService.createChart(dto);
-  }
-
   @SkipAuth()
   @Get(':chartName')
   getChart(@Param('chartName') chartName: string) {
@@ -68,25 +63,6 @@ export class ChartController {
     @Param('categoryId', ParseIntPipe) categoryId: number,
   ) {
     return this.chartService.removeCategoryFromChart(chartName, categoryId);
-  }
-
-  @Patch(':chartName/playlist/add/:playlistId')
-  addTrendPlaylistToChart(
-    @Param('chartName') chartName: string,
-    @Param('playlistId', ParseIntPipe) playlistId: number,
-  ) {
-    return this.chartService.addTrendPlaylistToChart(chartName, playlistId);
-  }
-
-  @Delete(':chartName/playlist/remove/:playlistId')
-  removeTrendPlaylistFromChart(
-    @Param('chartName') chartName: string,
-    @Param('playlistId', ParseIntPipe) playlistId: number,
-  ) {
-    return this.chartService.removeTrendPlaylistFromChart(
-      chartName,
-      playlistId,
-    );
   }
 
   @Delete('delete/:chartName')

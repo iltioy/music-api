@@ -26,7 +26,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       this.songs_to_playlists.deleteMany(),
       this.playlists_to_categories.deleteMany(),
       this.users_to_playlists.deleteMany(),
-      this.chart.deleteMany(),
     ]);
   }
 }

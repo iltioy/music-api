@@ -23,7 +23,6 @@ model User {
   id Int @id @default(autoincrement()) @map("id_пользователя")
 
   username      String  @unique @map("имя")
-  nickname      String? @map("псевдоним")
   role          String  @default("user") @map("роль")
   email         String  @unique @map("email")
   image_url String  @map("фотография")
@@ -59,7 +58,6 @@ model Playlist {
   users_to_playlists      users_to_playlists[]
   songs_to_playlists      songs_to_playlists[]
   playlists_to_categories playlists_to_categories[]
-  Chart Chart[]
 
   @@map("Плейлисты")
 }
@@ -115,27 +113,13 @@ model Category {
   id   Int    @id @default(autoincrement()) @map("id_категории")
   name String @map("название")
 
-  chart_id Int? @map("id_чарта")
-  chart Chart? @relation(fields: [chart_id], references: [id], onDelete: Cascade)
+  chart_type String? @map("тип_чарта")
 
   order Int @map("порядок")
 
   playlists_to_categories playlists_to_categories[]
 
   @@map("Категории")
-}
-
-model Chart {
-  id Int @id @default(autoincrement()) @map("id_чарта")
-
-  chart_page String @unique
-
-  trend_playlist_id       Int?
-  trend_palylist Playlist? @relation(fields: [trend_playlist_id], references: [id], onDelete: SetNull)
-
-  Category Category[]
-
-  @@map("Чарты")
 }
 
 model users_to_playlists {
