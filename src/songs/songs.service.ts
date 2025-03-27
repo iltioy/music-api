@@ -206,7 +206,11 @@ export class SongsService {
 
     if (!user) throw new NotFoundException('User was not found by id');
 
-    if (!existingPlaylist) {
+    console.log({
+      existingPlaylist,
+    });
+
+    if (!existingPlaylist?.playlist) {
       let playlist = await this.playlistsService.createFavoritePlaylist(userId);
 
       const updatedPlaylist = await this.playlistsService.addSongToPlaylist(
@@ -229,13 +233,13 @@ export class SongsService {
     if (!isSongInFavoritePlaylist) {
       updatedPlaylist = await this.playlistsService.addSongToPlaylist(
         userId,
-        existingPlaylist.id,
+        existingPlaylist.playlist.id,
         songId,
       );
     } else {
       updatedPlaylist = await this.playlistsService.removeSongFromPlaylist(
         userId,
-        existingPlaylist.id,
+        existingPlaylist.playlist.id,
         songId,
       );
     }

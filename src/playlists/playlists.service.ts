@@ -419,6 +419,8 @@ export class PlaylistsService {
       },
     });
 
+    console.log({ playlist });
+
     if (!playlist) throw new NotFoundException('Playlist was not found');
 
     return playlist;
